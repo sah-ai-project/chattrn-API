@@ -380,6 +380,7 @@ details summary { margin-top: 4px; }
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <button type="button" class="plain" id="loadZones" style="color:var(--brand)">View all zones</button>
             <button type="button" class="plain" id="findParam" style="color:var(--brand)">Find zone parameter</button>
+            <button type="button" class="plain" id="syncAll" style="color:var(--brand)">Sync all zones</button>
             <span class="hint" id="zoneStatus"></span>
           </div>
         </div>
@@ -1593,6 +1594,28 @@ details summary { margin-top: 4px; }
       return false;
     }
   }
+  // Reads every zone (or outlet) through the backend and tags each product with the zones it appears in.
+  // Customers are then answered from their own zone's products.
+  $("syncAll").addEventListener("click", async function () {
+    var btn = this;
+    btn.disabled = true;
+    $("zoneStatus").textContent = "Syncing every zone. This can take a minute…";
+    try {
+      var id = await ensureBackendStore();
+      var res = await backend("POST", "/api/stores/" + id + "/catalog/sync", {});
+      if (res.http !== 200) throw new Error((res.body.error && res.body.error.message) || ("HTTP " + res.http));
+      if (!res.body.ok) {
+        $("zoneStatus").textContent = res.body.message;
+      } else {
+        $("zoneStatus").textContent = "Synced " + res.body.products_total + " products from " + res.body.zones_checked +
+          " zones. Each product is tagged with the zones it appears in.";
+      }
+    } catch (e) {
+      $("zoneStatus").textContent = "Could not sync: " + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
   $("findParam").addEventListener("click", async function () {
     var btn = this;
     btn.disabled = true;

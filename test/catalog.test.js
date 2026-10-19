@@ -52,13 +52,14 @@ async function saveProductMapping(api, id) {
   return api("PUT", `/api/stores/${id}/mapping`, { resource: "product", rows });
 }
 
-test("sync refuses until the product fields are saved", async () => {
+test("sync saves the product field mapping itself when none is saved", async () => {
   const s = await startStack({ zoneRequired: true });
   try {
     const id = await s.create();
     const r = await s.api("POST", `/api/stores/${id}/catalog/sync`, {});
-    assert.equal(r.body.ok, false);
-    assert.match(r.body.message, /Save the product fields/);
+    assert.equal(r.body.ok, true);
+    const m = await s.api("GET", `/api/stores/${id}/mapping?resource=product`);
+    assert.ok(m.body.current || m.body.versions, "mapping saved");
   } finally { s.close(); }
 });
 

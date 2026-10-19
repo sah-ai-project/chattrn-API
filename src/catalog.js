@@ -6,11 +6,36 @@ const E = require("./endpoints");
 const M = require("./mapping");
 const { discoverZoneParam } = require("./location");
 
+// Saves the product field mapping automatically when none is saved yet: reads the product list, matches
+// fields by rule, and saves only if every required field matches. The mapping is a rule-based proposal;
+// a person can change it in Map fields later.
+async function prepareProductMapping(ctx, store) {
+  if (M.isSaved(store, "product")) return { ok: true };
+  const host = new URL(store.base_url).host;
+  const chk = await E.checkEndpoint(ctx, store, "products", {});
+  // A zone-less store can report "needs attention" yet still have a sample read with its first zone.
+  const sample = M.sampleFor(store, "product");
+  if (!sample) return { ok: false, message: `Product list: ${chk.message || chk.summary || "no products could be read"}` };
+  const proposal = M.propose("product", sample);
+  const rows = proposal.rows.map((r) => ({
+    key: r.key,
+    source_path: r.source_path,
+    state: r.state,
+    not_in_store: r.key === "updated_at" || undefined,
+  }));
+  try {
+    const { rows: saved, extras } = M.normaliseRows(store, "product", rows, []);
+    M.saveVersion(store, "product", saved, extras);
+    return { ok: true, host };
+  } catch (e) {
+    return { ok: false, message: `Field mapping: ${e.message}` };
+  }
+}
+
 async function syncCatalog(ctx, store, { deadline = Infinity } = {}) {
   const host = new URL(store.base_url).host;
-  if (!M.isSaved(store, "product")) {
-    return { ok: false, message: "Save the product fields in Map fields first, so products can be read." };
-  }
+  const mapped = await prepareProductMapping(ctx, store);
+  if (!mapped.ok) return { ok: false, message: mapped.message };
   if (!store.delivery?.context_param || !store.delivery?.param_confirmed) {
     const d = await discoverZoneParam(ctx, store, { host });
     if (d.state !== "passed") return { ok: false, message: `The zone parameter isn't confirmed for this store. ${d.message}` };
@@ -66,4 +91,4 @@ function catalogFor(store, zoneId) {
   return items.map((e) => ({ ...e.product, zones: e.zones }));
 }
 
-module.exports = { syncCatalog, catalogFor };
+module.exports = { syncCatalog, catalogFor, prepareProductMapping };
