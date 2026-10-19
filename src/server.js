@@ -79,6 +79,7 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
       website_url: body.website_url ? String(body.website_url).trim() : null,
       base_url: base,
       auth: { mode: a.mode, header: a.header, secret_enc: a.key ? encrypt(a.key, ctx.secretKey) : null },
+      brand: body.brand ? String(body.brand).trim().slice(0, 120) || null : null,
       currency,
       country_code: body.country_code ? String(body.country_code).toUpperCase() : null,
       status: "draft",

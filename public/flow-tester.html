@@ -206,6 +206,29 @@ details summary { margin-top: 4px; }
   .card { padding: 16px; }
   .page-title { font-size: 20px; line-height: 30px; }
 }
+/* ---- Connected stores (list view, Figma 34075:28023) ---- */
+.connect-card { flex-direction: row; align-items: center; gap: 12px; padding: 16px 20px; flex-wrap: wrap; }
+.connect-tile { width: 48px; height: 48px; border-radius: 12px; background: var(--line2); display: grid; place-items: center; flex: none; color: var(--fg); }
+.connect-copy { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.connect-copy h3 { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--fg-strong); }
+.connect-copy p { font-size: 12px; line-height: 18px; color: var(--muted); }
+.btn-connect { background: var(--brand); color: var(--brand-fg); border: 0; border-radius: 14px; padding: 14px 16px; font: 600 14px/20px Inter, sans-serif; cursor: pointer; flex: none; }
+.btn-connect:hover { filter: brightness(0.95); }
+.list-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.search-field { display: flex; align-items: center; gap: 8px; width: 242px; max-width: 100%; height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--muted2); }
+.search-field input { border: 0; outline: 0; flex: 1; min-width: 0; font: 400 13px/20px Inter, sans-serif; color: var(--fg-strong); background: transparent; padding: 0; }
+.store-table th, .store-table td { padding: 12px; font-size: 13px; line-height: 20px; }
+.store-table th { background: var(--surface); font-size: 12px; font-weight: 500; color: var(--fg-strong); }
+.store-table td { color: var(--fg-strong); }
+.store-table .act { text-align: center; width: 72px; }
+.store-name { display: inline-flex; align-items: center; gap: 8px; }
+.store-logo { width: 24px; height: 24px; border-radius: 6px; background: var(--line2); display: grid; place-items: center; color: var(--muted); flex: none; }
+.icon-btn { width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; display: inline-grid; place-items: center; cursor: pointer; color: var(--fg); padding: 0; }
+.icon-btn:hover, .icon-btn[aria-expanded="true"] { background: var(--line2); }
+.store-menu { position: fixed; z-index: 20; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 9px 23.5px rgba(0,0,0,.12); padding: 4px; min-width: 160px; }
+.store-menu button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: 6px; font: 400 13px/20px Inter, sans-serif; color: var(--fg-strong); cursor: pointer; }
+.store-menu button:hover { background: var(--field); }
+@media (max-width: 640px) { .btn-connect { width: 100%; } .search-field { width: 100%; } }
 </style>
 </head>
 <body>
@@ -246,6 +269,29 @@ details summary { margin-top: 4px; }
     </div>
 
     <div class="content">
+      <section id="listView" hidden style="display:flex;flex-direction:column;gap:20px">
+        <div class="banner ok" id="listBanner" hidden><div class="banner-body"><span id="listBannerText" style="font-size:13px;color:var(--fg-strong)"></span></div></div>
+        <div class="card connect-card">
+          <div class="connect-tile" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg></div>
+          <div class="connect-copy">
+            <h3>Connect website</h3>
+            <p>Connect your website store to quickly set up chat widget on your store</p>
+          </div>
+          <button type="button" class="btn-connect" id="connectBtn">Connect</button>
+        </div>
+        <div class="list-tools">
+          <label class="search-field"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input type="search" id="storeSearch" placeholder="Search" autocomplete="off" aria-label="Search connected stores"></label>
+        </div>
+        <div class="table-wrap">
+          <table class="store-table">
+            <thead><tr><th>Store</th><th>Website</th><th>Assign brand</th><th>Status</th><th class="act">Action</th></tr></thead>
+            <tbody id="storeRows"></tbody>
+          </table>
+        </div>
+        <div id="storeMenu" class="store-menu" hidden><button type="button" id="copyStoreId">Copy store ID</button></div>
+      </section>
+      <div id="wizardView" hidden>
+      <div style="margin-bottom:-8px"><button type="button" class="plain" id="backToList" style="color:var(--brand)">&larr; Connected stores</button></div>
       <header>
         <h1 class="page-title">Connect a custom website</h1>
         <p class="page-sub">Connect your own ecommerce website through its API. Products, stock and orders then work in Skills, Actions, the AI Agent, the widget and the inbox, just like a Shopify store. Nothing is saved, and only GET requests are sent.</p>
@@ -411,6 +457,7 @@ details summary { margin-top: 4px; }
         <button type="button" class="plain" id="back">Back</button>
         <button type="button" class="primary" id="next">Continue: map fields with AI</button>
         <span class="hint" id="finishNote" style="align-self:center"></span>
+      </div>
       </div>
     </div>
   </div>
@@ -1452,7 +1499,7 @@ details summary { margin-top: 4px; }
   }
 
   // ---- Steps -------------------------------------------------------------
-  var STEP_NEXT = ["Continue: map fields with AI", "Save mapping and test connection", "Continue: delivery setup", "Finish and import products"];
+  var STEP_NEXT = ["Continue: map fields with AI", "Save mapping and test connection", "Continue: delivery setup", "Finish and connect store"];
   var STEP_SUB = ["Endpoints and sign-in", "AI matches, you check", "Data and speed", "Where you deliver"];
   function showStep(n) {
     state.step = Math.max(1, Math.min(4, n));
@@ -1530,6 +1577,7 @@ details summary { margin-top: 4px; }
       base_url: $("base").value.trim(),
       website_url: $("siteUrl").value.trim(),
       currency: "BDT",
+      brand: $("brand").selectedIndex > 0 ? $("brand").value : null,
       delivery_mode: $("storeType").value,
       auth: { mode: mode, header: $("header").value.trim() || "X-API-Key", key: mode === "none" ? null : $("key").value },
     });
@@ -1545,7 +1593,7 @@ details summary { margin-top: 4px; }
   function init() {
     buildRows();
     setMode($("storeType").value);
-    showStep(1);
+    showList();
     try {
       var b = localStorage.getItem("prioTest.base");
       if (b) $("base").value = b;
@@ -1571,7 +1619,7 @@ details summary { margin-top: 4px; }
       if (miss.length) return;
     }
     if (state.step < 4) { showStep(state.step + 1); return; }
-    $("finishNote").textContent = "Import isn't part of this tester yet. Nothing was saved or imported.";
+    finishConnection();
   });
   $("storeType").addEventListener("change", function () { setMode($("storeType").value); resetBackendStore(); });
   ["base", "auth", "header", "key", "siteUrl"].forEach(function (id) {
@@ -1663,6 +1711,118 @@ details summary { margin-top: 4px; }
       function () { btn.textContent = "Copied"; },
       function () { btn.textContent = "Copy blocked"; });
   });
+
+
+  // ---- Connected stores list (first view). Shows stores whose connection check passed. ----
+  var GLOBE = '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c2 2.2 2 9.8 0 12M8 2c-2 2.2-2 9.8 0 12"/></svg>';
+  var DOTS = '<svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="4" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="10" cy="16" r="1.6"/></svg>';
+  var storeList = [];
+  var storeMenuFor = null;
+
+  function showList() {
+    $("wizardView").hidden = true;
+    $("listView").hidden = false;
+    closeStoreMenu();
+    loadStores();
+  }
+  function showWizard() {
+    $("listView").hidden = true;
+    $("wizardView").hidden = false;
+    closeStoreMenu();
+    showStep(1);
+  }
+  function setBanner(text) {
+    $("listBannerText").textContent = text || "";
+    $("listBanner").hidden = !text;
+  }
+  async function loadStores() {
+    $("storeRows").innerHTML = '<tr><td colspan="5" class="hint">Loading connected stores…</td></tr>';
+    var res;
+    try { res = await backend("GET", "/api/stores"); } catch (e) { res = { http: 0, body: {} }; }
+    if (res.http !== 200) {
+      $("storeRows").innerHTML = '<tr><td colspan="5" style="color:var(--fail)">Could not load the connected stores. Check that the Chattrn backend is running.</td></tr>';
+      return;
+    }
+    storeList = (res.body.stores || []).filter(function (s) { return s.status === "connected"; });
+    renderStores();
+  }
+  function renderStores() {
+    var q = $("storeSearch").value.trim().toLowerCase();
+    var shown = storeList.filter(function (s) {
+      if (!q) return true;
+      return [s.name, s.website_url, s.brand].some(function (v) { return v && String(v).toLowerCase().indexOf(q) !== -1; });
+    });
+    if (!shown.length) {
+      var msg = storeList.length ? "No connected store matches your search." : "No connected stores yet. Press Connect to add your first store.";
+      $("storeRows").innerHTML = '<tr><td colspan="5" class="hint">' + msg + '</td></tr>';
+      return;
+    }
+    $("storeRows").innerHTML = shown.map(function (s) {
+      return '<tr>' +
+        '<td><span class="store-name"><span class="store-logo">' + GLOBE + '</span>' + esc(s.name) + '</span></td>' +
+        '<td>' + esc(String(s.website_url || "—").replace(/^https?:\/\//, "").replace(/\/$/, "")) + '</td>' +
+        '<td>' + esc(s.brand || "—") + '</td>' +
+        '<td><span class="badge b-pass">Connected</span></td>' +
+        '<td class="act"><button type="button" class="icon-btn" aria-label="Store actions for ' + esc(s.name) + '" aria-expanded="false" data-store="' + esc(s.id) + '">' + DOTS + '</button></td>' +
+        '</tr>';
+    }).join("");
+  }
+  function closeStoreMenu() {
+    storeMenuFor = null;
+    $("storeMenu").hidden = true;
+    document.querySelectorAll(".icon-btn[aria-expanded='true']").forEach(function (b) { b.setAttribute("aria-expanded", "false"); });
+  }
+  function openStoreMenu(btn) {
+    closeStoreMenu();
+    storeMenuFor = btn.getAttribute("data-store");
+    var r = btn.getBoundingClientRect();
+    var m = $("storeMenu");
+    m.hidden = false;
+    m.style.top = (r.bottom + 4) + "px";
+    m.style.left = Math.max(8, r.right - m.offsetWidth) + "px";
+    btn.setAttribute("aria-expanded", "true");
+  }
+  $("storeRows").addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest(".icon-btn") : null;
+    if (!b) return;
+    if (storeMenuFor === b.getAttribute("data-store") && !$("storeMenu").hidden) closeStoreMenu();
+    else openStoreMenu(b);
+  });
+  $("copyStoreId").addEventListener("click", function () {
+    var id = storeMenuFor;
+    closeStoreMenu();
+    if (!id || !navigator.clipboard) { setBanner("Could not copy the store ID here."); return; }
+    navigator.clipboard.writeText(id).then(
+      function () { setBanner("Store ID copied."); },
+      function () { setBanner("Could not copy the store ID here."); });
+  });
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest || (!e.target.closest("#storeMenu") && !e.target.closest(".icon-btn"))) closeStoreMenu();
+  });
+  $("storeSearch").addEventListener("input", renderStores);
+  $("connectBtn").addEventListener("click", function () { resetBackendStore(); setBanner(""); showWizard(); });
+  $("backToList").addEventListener("click", showList);
+
+  // Finish runs the connection check again. The store joins the list only when that check passes.
+  async function finishConnection() {
+    var btn = $("next");
+    btn.disabled = true;
+    $("finishNote").textContent = "Checking the connection…";
+    try {
+      var id = await ensureBackendStore();
+      var res = await backend("POST", "/api/stores/" + id + "/connection/check", {});
+      if (res.http !== 200 || res.body.state !== "connected") {
+        throw new Error(res.body.message || ("HTTP " + res.http));
+      }
+      $("finishNote").textContent = "";
+      showList();
+      setBanner(($("storeName").value.trim() || "Store") + " is connected.");
+    } catch (e) {
+      $("finishNote").textContent = "Not connected yet: " + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
 
   init();
 })();
