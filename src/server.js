@@ -12,6 +12,7 @@ const E = require("./endpoints");
 const M = require("./mapping");
 const { runTests } = require("./test-runner");
 const { discoverZoneParam } = require("./location");
+const { syncCatalog, catalogFor } = require("./catalog");
 
 const AUTH_MODES = ["none", "key", "bearer", "basic"];
 const DELIVERY_MODES = ["zone", "outlet"];
@@ -260,6 +261,23 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
   });
 
   // ---- test runs and products ----
+
+  route("POST", "/api/stores/:id/catalog/sync", async ({ params }) => {
+    const s = findStore(params.id);
+    const result = await syncCatalog(ctx, s, { deadline: Date.now() + 55000 });
+    if (result.ok) db.put(s);
+    return { body: result };
+  });
+
+  // Products a customer in one zone can be offered (from the last sync). Without ?zone, every synced product.
+  route("GET", "/api/stores/:id/catalog", ({ params, query }) => {
+    const s = findStore(params.id);
+    if (!s.catalog) throw new HttpError(409, "not_synced", "Sync the catalog first: POST /api/stores/:id/catalog/sync.");
+    const zone = query.zone != null && query.zone !== "" ? String(query.zone) : null;
+    const limit = Math.min(200, Math.max(1, Number(query.limit) || 50));
+    const items = catalogFor(s, zone);
+    return { body: { zone, count: items.length, synced_at: s.catalog.synced_at, products: items.slice(0, limit) } };
+  });
 
   route("POST", "/api/stores/:id/location/discover", async ({ params }) => {
     const s = findStore(params.id);

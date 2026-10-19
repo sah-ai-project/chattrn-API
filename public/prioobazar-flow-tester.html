@@ -733,8 +733,27 @@ details summary { margin-top: 4px; }
     document.querySelectorAll(".runAll").forEach(function (b) { b.disabled = on; });
   }
 
+  // The catalog covers every zone, so the product sample only needs one zone to read from.
+  // If none is chosen, the first zone from the store's list is used for the sample.
+  async function ensureSampleZone() {
+    if (state.ctxValue) return;
+    var base = $("base").value.trim().replace(/\/+$/, "");
+    var res = await get(base + "/delivery-zone");
+    if (!res.ok || res.http !== 200 || !res.isJson) return;
+    var found = extractList(res.body);
+    if (!found || !found.list.length) return;
+    var z = found.list.filter(isObj)[0];
+    var zid = pick(z, "zone", "zid");
+    var id = zid != null && zid !== "" ? zid : (z.id != null ? z.id : z.code);
+    if (id == null) return;
+    state.ctxValue = String(id);
+    $("ctxValue").value = state.ctxValue;
+    $("zoneStatus").textContent = "Sample read from zone " + state.ctxValue + ". The catalog sync covers every zone.";
+  }
+
   async function testAll() {
     setRunning(true);
+    await ensureSampleZone();
     state.rowResults = {};
     state.products = [];
     for (var i = 0; i < ROWS.length; i++) {

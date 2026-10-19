@@ -9,6 +9,6 @@
   "scripts": {
     "start": "node src/server.js",
     "mock": "node src/mock-store.js",
-    "test": "node --test test/guard.test.js test/backend.test.js test/gaps.test.js test/location.test.js"
+    "test": "node --test test/guard.test.js test/backend.test.js test/gaps.test.js test/location.test.js test/catalog.test.js"
   }
 }
