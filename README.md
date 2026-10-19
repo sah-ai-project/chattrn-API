@@ -2,10 +2,10 @@
 
 Backend for the four-step "Connect a custom website" flow: Store details, Your API (endpoints),
 Map fields, Test connection, Delivery setup. It takes over the calls the browser makes in
-`public/prioobazar-flow-tester.html`, so the store's key stays on the server.
+`public/flow-tester.html`, so the store's key stays on the server.
 
 Covers dev spec **slice 2 (Map my existing API)** plus the parts of **slice 1B** the flow uses
-(endpoint checks, test runner, zones). Tested against a local mock store that uses prioobazar's field names.
+(endpoint checks, test runner, zones). Tested against a local mock store. Nothing is built for one store: each store's fields, zone parameter and paging are found or mapped per store.
 
 ## Run
 
@@ -41,7 +41,7 @@ Requires Node 22 or later. No dependencies.
 | POST | `/api/stores/:id/mapping/rollback` | Back to the previous version |
 | GET | `/api/stores/:id/fields?resource=&compatible_with=` | The "Your field" dropdown, compatible fields first |
 | GET | `/api/stores/:id/zones` | Zones, mapped to `{id, name}` |
-| PUT | `/api/stores/:id/delivery-settings` | `{mode: zone or outlet, ask_area_when, remember_area}`. Sets `zoneId` or `location_id` |
+| PUT | `/api/stores/:id/delivery-settings` | `{mode: zone or outlet, ask_area_when, remember_area}`. Sets the zone parameter name only once discovery has confirmed it |
 | POST | `/api/stores/:id/location/discover` | Finds the query name the store reads its zone from, by testing candidates against a real zone. Read-only |
 | POST | `/api/stores/:id/test-runs` | Test connection: `{phone?, zone?, rediscover?}`. Read-only, under 60 s. Runs discovery first unless the name is already confirmed |
 | GET | `/api/stores/:id/test-runs/latest` | Last run |
@@ -59,8 +59,8 @@ Errors use `{"error": {"code", "message"}}`. Messages follow the spec's wording 
 
 ## Decisions to confirm
 
-1. **`updated_at` is required by the tester, but prioobazar may not have it.** The save gate accepts `not_in_store: true` for this one field. Sync would then do full refreshes instead of incremental ones. Nothing else gets this exception.
-2. **The zone parameter name** is found per store by discovery (`src/location.js`). It tries `zoneId`, `zone_id`, `zone`, `zoneid`, `zone-id`, `area_id`, `areaId`, `location_id`, `locationId` against a real zone, and accepts a name only if it changes the product list. Several matches or none is reported, never guessed. The default `zoneId` is only a starting value. For prioobazar, `zoneId` is confirmed by its ERP code (`lib/storefront-scope.ts` at commit 818e570). `location_id` for outlet mode is unconfirmed.
+1. **`updated_at` is required by the tester, but the store may not have it.** The save gate accepts `not_in_store: true` for this one field. Sync would then do full refreshes instead of incremental ones. Nothing else gets this exception.
+2. **The zone parameter name** is never assumed. Discovery (`src/location.js`) tests candidate names against a real zone and accepts one only if it changes the product list. Several matches or none is reported. A confirmed name is kept. Outlet mode is found the same way.
 3. **Delivery setting values** `always | when_needed | never` for "When should the AI ask for the area?" are my own. The spec does not list them.
 4. **Key length** is 1 to 512 characters for mapped stores. The spec's 16 to 512 rule is for Chattrn API stores.
 5. **Cart and order write paths** in the registry are proposals only. They are never called.
@@ -69,7 +69,7 @@ Errors use `{"error": {"code", "message"}}`. Messages follow the spec's wording 
 
 - **Location parameter discovery.** Each store's zone parameter is tested, not assumed. Shows as the "Location parameter" check in Test connection, and the confirmed name is kept across saves while the mode stays the same.
 
-- **Zone-aware reads.** Prioobazar-style stores return 200 with an empty list when no zone is sent. Set the zone with `PUT /delivery-settings {zone}`. Without one, the product check tries the first zone and says so.
+- **Zone-aware reads.** Some stores return 200 with an empty list when no zone is sent. Set the zone with `PUT /delivery-settings {zone}`. Without one, the product check tries the first zone and says so.
 - **Paging detection.** Page number, offset, cursor (`next_cursor`) and Link header, detected from the first two pages. The walker reads up to 40 pages.
 - **Order tab.** Order fields, status value map (raw status to Chattrn status; unmapped statuses block save), `GET /api/stores/:id/orders?phone=`.
 - **Customer tab.** Matches phone and ID, never copies the customer, and redacts customer values from stored samples.
@@ -87,12 +87,10 @@ Errors use `{"error": {"code", "message"}}`. Messages follow the spec's wording 
 - The limit of 30 endpoint checks per store per minute
 - DNS rebinding protection: the address is checked once before each call, not pinned to the connection
 
-## Testing against prioobazar
+## Testing against a store
 
-From your own machine, because the sandbox cannot reach `erp.prioobazar.com`:
+From your own machine, so the store can be reached from your network:
 
     npm start
-    # open http://localhost:3100, create a store with base URL https://erp.prioobazar.com/api/shop
-    # and sign-in method "No sign-in"
-
-The flow tester page still calls the store directly from the browser. Wiring it to these routes is the next step.
+    # open http://localhost:3100, create a store with its base URL and sign-in method,
+    # then press Find zone parameter in Delivery setup.
