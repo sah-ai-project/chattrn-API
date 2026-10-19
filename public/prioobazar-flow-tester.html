@@ -1,0 +1,1623 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connect a custom website: tester</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f1f4f5; --surface: #ffffff; --fg: #425066; --fg-strong: #232f40; --muted: #6c7584; --muted2: #7b8594;
+  --line: #dae0e4; --line2: #e7ebee; --field: #f8f9fa; --chip-bg: #edf1f3;
+  --brand: #a946ba; --brand-fg: #ffffff; --rail: #dae0e4;
+  --pass: #107062; --warn: #e98b00; --fail: #d31b1b; --skip: #6c7584;
+  --pass-bg: #e6f4f1; --warn-bg: #fdf3e1; --fail-bg: #fbe9e9; --skip-bg: #edf1f3; --code-bg: #f1f4f5;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 13px/20px Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+h1, h2, h3, p { margin: 0; }
+.hint, .meta { font-size: 12px; line-height: 18px; color: var(--muted); }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; overflow-wrap: anywhere; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+[hidden] { display: none !important; }
+
+/* ---- App frame ---- */
+.app { display: grid; grid-template-columns: 50px 210px 1fr; min-height: 100vh; }
+.rail { background: var(--rail); display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 14px 0; }
+.rail-group { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.rail-item { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; color: var(--muted); font-size: 14px; }
+.rail-item.on { background: var(--surface); color: var(--brand); box-shadow: 0 0 1.5px rgba(9,30,66,.15); }
+.side { background: var(--bg); padding: 14px; display: flex; flex-direction: column; gap: 20px; }
+.side h2 { font-size: 18px; line-height: 26px; font-weight: 500; color: var(--fg-strong); padding-left: 10px; }
+.side .cat { font-size: 12px; font-weight: 600; line-height: 18px; color: var(--muted2); text-transform: uppercase; padding-left: 10px; margin-bottom: 9px; }
+.side .nav { display: flex; flex-direction: column; gap: 2px; }
+.side .nav a { display: block; padding: 8px; border-radius: 8px; color: var(--fg); text-decoration: none; height: 36px; line-height: 20px; }
+.side .nav a.on { background: var(--surface); color: var(--fg-strong); font-weight: 600; box-shadow: 0 0 1.5px rgba(9,30,66,.15); }
+.main { background: var(--surface); display: flex; flex-direction: column; min-width: 0; border-radius: 10px 0 0 0; box-shadow: 0 9px 23.5px rgba(0,0,0,.06); }
+.topbar { display: flex; align-items: center; gap: 8px; height: 50px; padding: 11px 18px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.topbar .crumb { color: var(--fg); }
+.topbar .crumb.dim { color: var(--muted); }
+.topbar .sep { color: var(--muted2); }
+.content { padding: 24px; display: flex; flex-direction: column; gap: 20px; max-width: 1180px; width: 100%; }
+
+/* ---- Page header and stepper ---- */
+.page-title { font-size: 22px; line-height: 34px; font-weight: 600; color: var(--fg); }
+.page-sub { font-size: 12px; line-height: 18px; color: var(--muted); margin-top: 6px; max-width: 700px; }
+.stepper { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.step { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); cursor: pointer; text-align: left; color: inherit; font: inherit; min-width: 0; }
+.step.on { border: 1.5px solid var(--brand); }
+.step .num { width: 26px; height: 26px; border-radius: 13px; display: grid; place-items: center; font-weight: 600; font-size: 13px; border: 1.5px solid var(--line2); color: var(--muted); flex: none; }
+.step.on .num { background: var(--brand); border-color: var(--brand); color: var(--brand-fg); }
+.step .t { font-weight: 600; font-size: 14px; line-height: 20px; color: var(--fg); }
+.step .s { font-size: 12px; line-height: 18px; color: var(--muted); }
+
+/* ---- Cards ---- */
+.card { background: var(--surface); border: 1px solid var(--line2); border-radius: 10px; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.card-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.card-head h3 { font-size: 16px; line-height: 24px; font-weight: 600; color: var(--fg); }
+.card-head p { font-size: 13px; line-height: 20px; color: var(--muted); margin-top: 4px; }
+.row2 { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.row2 > .field { flex: 1 1 240px; min-width: 0; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field > label { font-weight: 500; font-size: 13px; line-height: 20px; color: var(--fg); }
+input, select {
+  font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  height: 40px; padding: 0 12px; width: 100%; min-width: 0;
+}
+input::placeholder { color: var(--muted2); }
+input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible, .step:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+button {
+  font: inherit; font-weight: 600; cursor: pointer; border-radius: 10px; padding: 6px 12px; height: auto;
+  border: 0; background: var(--chip-bg); color: var(--fg); white-space: nowrap; font-size: 14px; line-height: 20px;
+}
+button.primary { background: var(--brand); color: var(--brand-fg); }
+button.plain { background: transparent; border: 1px solid var(--line); }
+button:disabled { opacity: 0.55; cursor: default; }
+.chip { display: inline-block; font-size: 12px; font-weight: 600; line-height: 18px; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.s-pass { color: var(--pass); background: var(--pass-bg); }
+.s-warn { color: var(--warn); background: var(--warn-bg); }
+.s-fail { color: var(--fail); background: var(--fail-bg); }
+.s-skip { color: var(--skip); background: var(--skip-bg); }
+.ok { color: var(--pass); font-weight: 600; }
+.miss { color: var(--fail); font-weight: 600; }
+.part { color: var(--warn); font-weight: 600; }
+
+/* ---- Endpoint rows ---- */
+.group-label { font-size: 11px; font-weight: 600; line-height: 16px; color: var(--muted); text-transform: uppercase; letter-spacing: .02em; }
+.ep { display: grid; grid-template-columns: 170px 1fr 200px; gap: 16px; align-items: start; border-top: 1px solid var(--line2); padding: 12px 0; }
+.ep:first-of-type { border-top: 0; }
+.ep .name { font-weight: 600; color: var(--fg); }
+.ep .purpose { font-size: 12px; line-height: 18px; color: var(--muted); }
+.pathline { display: grid; grid-template-columns: auto 1fr; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.pathline .method { font: 600 12px/18px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); background: var(--field); padding: 0 10px; display: flex; align-items: center; border-right: 1px solid var(--line); }
+.pathline input { border: 0; border-radius: 0; height: 36px; font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.pathline input:focus-visible { outline-offset: -2px; }
+.ep-status { font-size: 12px; line-height: 18px; color: var(--muted); }
+.ep-status b { display: block; font-size: 12px; line-height: 18px; }
+.params { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.params .field { flex: 1 1 160px; }
+.params .field label { font-size: 12px; }
+.params input { height: 34px; }
+.row-actions { margin-top: 8px; display: flex; gap: 8px; align-items: center; }
+.result { font-size: 13px; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.result:empty { display: none; }
+details summary { cursor: pointer; font-size: 13px; color: var(--brand); margin-top: 4px; }
+pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin: 8px 0 0; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 300px; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line2); vertical-align: top; }
+th { background: var(--field); font-size: 12px; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.val { max-width: 320px; overflow-wrap: anywhere; }
+select { height: 36px; }
+
+/* ---- Tiles, choices, zones ---- */
+.verdict { font-size: 16px; font-weight: 600; }
+.counts { display: flex; gap: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.tiles div { background: var(--field); border: 1px solid var(--line2); border-radius: 8px; padding: 10px 12px; }
+.tiles b { display: block; font-size: 20px; line-height: 28px; font-variant-numeric: tabular-nums; color: var(--fg-strong); }
+.tiles span { font-size: 12px; color: var(--muted); }
+.choice { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 10px; padding: 14px; cursor: pointer; background: var(--surface); min-width: 0; flex: 1 1 260px; }
+.choice input { width: auto; height: auto; margin-top: 3px; flex: none; }
+.choices { display: flex; gap: 12px; flex-wrap: wrap; }
+.zchip { font-size: 13px; padding: 5px 12px; border-radius: 999px; background: var(--chip-bg); }
+.zchip[aria-pressed="true"], [role="tab"][aria-selected="true"] { background: var(--brand); color: var(--brand-fg); }
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---- Map fields (Figma layout) ---- */
+.sparkle { width: 40px; height: 40px; border-radius: 10px; background: var(--field); display: grid; place-items: center; flex: none; color: var(--brand); font-size: 18px; }
+.badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.badge { display: inline-block; font-size: 11px; font-weight: 500; line-height: 16px; text-transform: uppercase; padding: 2px 6px; border-radius: 6px; white-space: nowrap; }
+.b-pass { background: #dcf9dc; color: #107062; }
+.b-warn { background: #fff2df; color: #e98b00; }
+.b-fail { background: #fbe9e9; color: #d31b1b; }
+.b-skip { background: #f1f4f5; color: #232f40; }
+.b-info { background: #ecf3fe; color: #3178e2; }
+.tabs2 { display: flex; gap: 24px; border-bottom: 1px solid var(--line2); padding: 0 16px; flex-wrap: wrap; }
+.tabs2 button { background: none; border: 0; border-radius: 0; padding: 14px 0 12px; color: var(--muted); font-weight: 400; font-size: 14px; border-bottom: 2px solid transparent; white-space: nowrap; }
+.tabs2 button[aria-selected="true"] { color: var(--brand); font-weight: 600; border-bottom-color: var(--brand); }
+.count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--line); color: var(--fg); font-size: 11px; font-weight: 600; margin-left: 4px; }
+.mtable-scroll { overflow-x: auto; }
+.mtable { min-width: 900px; }
+.mhead, .mrow { display: grid; grid-template-columns: 260px minmax(280px, 1fr) 220px 130px; gap: 16px; align-items: center; padding: 12px 16px; }
+.mhead { font-size: 12px; font-weight: 500; color: var(--fg-strong); padding: 10px 16px; background: var(--field); border-top: 1px solid var(--line2); }
+.mrow { border-top: 1px solid var(--line2); }
+.mrow-check { background: #fff2df; }
+.mname { font-weight: 600; font-size: 13px; color: var(--fg); }
+.mtag { display: inline-block; background: var(--field); border: 1px solid var(--line2); border-radius: 4px; padding: 1px 6px; margin-top: 4px; font: 12px/18px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--fg); }
+.mrow select { height: 36px; max-width: 280px; }
+.xrow { display: flex; gap: 14px; align-items: center; border-top: 1px solid var(--line2); padding: 12px 0; }
+.toggle { width: 40px; height: 20px; border-radius: 10px; border: 0; background: var(--line); position: relative; padding: 0; flex: none; }
+.toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .15s; }
+.toggle[aria-pressed="true"] { background: var(--pass); }
+.toggle[aria-pressed="true"]::after { left: 22px; }
+.step.done .num { background: var(--pass); border-color: var(--pass); color: #fff; }
+
+/* ---- Test connection (Figma layout) ---- */
+.banner { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 16px 24px; border-radius: 10px; border: 1px solid var(--line2); background: var(--surface); }
+.banner.ok { background: #dcf9dc; border-color: var(--line); }
+.banner.warn { background: var(--warn-bg); }
+.banner-body { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.banner button { padding: 6px 12px; color: #fff; border-radius: 10px; }
+.ico.big { width: 36px; height: 36px; border-radius: 18px; font-size: 16px; }
+.crow { display: flex; gap: 12px; align-items: center; border-top: 1px solid var(--line2); padding: 12px 0; }
+.crow:first-of-type { border-top: 0; }
+.crow-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.crow-title { font-weight: 600; font-size: 14px; color: var(--fg); }
+.ico { width: 24px; height: 24px; border-radius: 12px; display: grid; place-items: center; font-size: 12px; font-weight: 700; flex: none; }
+.ico-pass { background: #dcf9dc; color: #107062; }
+.ico-warn { background: #fff2df; color: #e98b00; }
+.ico-fail { background: #fbe9e9; color: #d31b1b; }
+.ico-skip { background: #f1f4f5; color: #6c7584; }
+.sec-title { font-size: 16px; line-height: 24px; font-weight: 600; color: var(--fg); }
+.fields-wrap { display: flex; flex-direction: column; gap: 8px; }
+.fields-wrap > strong { font-size: 13px; font-weight: 500; color: var(--fg-strong); }
+.fields-list { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ---- Delivery setup (Figma layout) ---- */
+.opt { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; cursor: pointer; }
+.opt input[type="radio"], .opt input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; padding: 0; flex: none; accent-color: var(--brand); }
+.opt-title { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; font-weight: 500; font-size: 14px; color: var(--fg); }
+.badge.b-pink { background: #e8dcf8; color: var(--brand); }
+details summary { margin-top: 4px; }
+
+/* ---- Footer ---- */
+.footer { border-top: 1px solid var(--line); display: flex; justify-content: center; gap: 12px; padding: 16px 24px; margin-top: auto; }
+.footer button { padding: 8px 14px; }
+
+@media (max-width: 1000px) {
+  .app { grid-template-columns: 1fr; }
+  .rail, .side { display: none; }
+  .main { border-radius: 0; box-shadow: none; }
+  .stepper { grid-template-columns: repeat(2, 1fr); }
+  .ep { grid-template-columns: 1fr; gap: 8px; }
+}
+@media (max-width: 640px) {
+  .content { padding: 16px; }
+  .stepper { grid-template-columns: 1fr; }
+  .card { padding: 16px; }
+  .page-title { font-size: 20px; line-height: 30px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="rail" aria-label="Primary">
+    <div class="rail-group">
+      <div class="rail-item" aria-hidden="true">◎</div>
+      <div class="rail-item" aria-hidden="true">⋔</div>
+      <div class="rail-item" aria-hidden="true">▥</div>
+    </div>
+    <div class="rail-group">
+      <div class="rail-item" aria-hidden="true">▤</div>
+      <div class="rail-item on" aria-hidden="true">⧉</div>
+      <div class="rail-item" aria-hidden="true">⚙</div>
+    </div>
+  </nav>
+
+  <aside class="side" aria-label="Integrations">
+    <h2>Integrations</h2>
+    <div>
+      <div class="cat">Categories</div>
+      <nav class="nav">
+        <a href="#" onclick="return false">All Integrations</a>
+        <a href="#" onclick="return false">BI &amp; Analytics</a>
+        <a href="#" onclick="return false">Communication Channels</a>
+        <a href="#" onclick="return false">CRM</a>
+        <a href="#" class="on" onclick="return false">E-commerce</a>
+        <a href="#" onclick="return false">Marketing automation</a>
+      </nav>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <span class="crumb dim">All Integrations</span>
+      <span class="sep">›</span>
+      <span class="crumb">Custom website API</span>
+    </div>
+
+    <div class="content">
+      <header>
+        <h1 class="page-title">Connect a custom website</h1>
+        <p class="page-sub">Connect your own ecommerce website through its API. Products, stock and orders then work in Skills, Actions, the AI Agent, the widget and the inbox, just like a Shopify store. Nothing is saved, and only GET requests are sent.</p>
+      </header>
+
+      <div class="stepper" aria-label="Setup steps">
+        <button type="button" class="step" data-step="1" ><span class="num">1</span><span><span class="t" style="display:block">Your API</span><span class="s">Endpoints and sign-in</span></span></button>
+        <button type="button" class="step" data-step="2" ><span class="num">2</span><span><span class="t" style="display:block">Map fields</span><span class="s">AI matches, you check</span></span></button>
+        <button type="button" class="step" data-step="3" ><span class="num">3</span><span><span class="t" style="display:block">Test connection</span><span class="s">Data and speed</span></span></button>
+        <button type="button" class="step" data-step="4" ><span class="num">4</span><span><span class="t" style="display:block">Delivery setup</span><span class="s">Where you deliver</span></span></button>
+      </div>
+
+      <!-- STEP 1: Your API -->
+      <section data-panel="1" style="display:flex;flex-direction:column;gap:20px">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h3>Store details</h3>
+              <p>How the store appears in Chattrn and which brand's conversations it serves.</p>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field"><label for="storeName">Store name</label><input type="text" id="storeName" placeholder="e.g. Prioobazar" autocomplete="off"></div>
+            <div class="field"><label for="siteUrl">Website URL <span style="color:var(--fail)">*</span></label><input type="text" id="siteUrl" value="https://erp.prioobazar.com" autocomplete="off"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label for="brand">Assign brand <span style="color:var(--fail)">*</span></label><select id="brand"><option>Select a brand</option><option>Prioobazar</option></select></div>
+            <div class="field"><label for="storeType">Store Type <span style="color:var(--fail)">*</span></label>
+              <select id="storeType" aria-label="Store Type">
+                <option value="zone" selected>Zone-based</option>
+                <option value="outlet">Outlet-based</option>
+              </select>
+            </div>
+          </div>
+          <p class="hint" id="detailsErr" style="color:var(--fail)" hidden></p>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h3>Your API</h3>
+              <p>Tell Chattrn where your API is and how to sign in to it.</p>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field"><label for="base">Base URL</label><input type="text" id="base" value="https://erp.prioobazar.com/api/shop" autocomplete="off"><span class="hint">Local: http://localhost:3456/api/shop</span></div>
+            <div class="field">
+              <label for="auth">Sign-in method</label>
+              <select id="auth">
+                <option value="none">None (public endpoints)</option>
+                <option value="key">API key in a header</option>
+                <option value="bearer">Bearer token</option>
+              </select>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field" id="headerBox" hidden><label for="header">Header name</label><input type="text" id="header" value="X-API-Key" autocomplete="off"></div>
+            <div class="field" id="keyBox" hidden><label for="key">API key or token</label><input type="password" id="key" autocomplete="off" spellcheck="false"><span class="hint">Sent to your Chattrn backend and stored encrypted there, so discovery can run. Not kept in the browser.</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h3>Your endpoints</h3>
+              <p>Add the endpoints you already have. Chattrn calls each once to read a sample; nothing in your store changes. Use <code>:name</code> for values the tester fills in.</p>
+            </div>
+            <button type="button" class="plain runAll" id="testAll">Test all endpoints</button>
+          </div>
+          <div class="row2" style="gap:12px">
+            <div class="field" style="flex:0 0 auto;min-width:200px"><label for="pages">Product pages to read</label><input type="number" id="pages" value="20" min="1" max="50"></div>
+            <div class="field" style="flex:1 1 300px"><span class="hint" style="padding-top:26px">Reads pages 1 to N of the product list, so the full count comes back.</span></div>
+          </div>
+          <div id="rows" style="display:flex;flex-direction:column"></div>
+          <p class="hint">Create order, cancel order and cart price check are not tested here, because they change data in the store or need a signed-in customer.</p>
+        </div>
+      </section>
+
+      <!-- STEP 2: Map fields -->
+      <section data-panel="2" hidden>
+        <div id="mapPanel" style="display:flex;flex-direction:column;gap:20px"></div>
+      </section>
+
+      <!-- STEP 3: Test connection -->
+      <section data-panel="3" hidden style="display:flex;flex-direction:column;gap:20px">
+        <div id="testPanel" style="display:flex;flex-direction:column;gap:20px"></div>
+
+        <div class="card" id="askCard">
+          <div class="card-head">
+            <div>
+              <h3>Ask about a product or stock</h3>
+              <p>Ask in your own words. Words in the question are matched against every loaded product. Each match is read again from the API for the zone or outlet, so you see price and availability there.</p>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field" style="flex:1 1 100%"><label for="askText">Your question</label><input type="text" id="askText" placeholder="e.g. Is 256GB black available in Zone 3? What is the price?" autocomplete="off"></div>
+            <div class="field" style="flex:1 1 220px"><label for="askZone">Zone or outlet value (optional)</label><input type="text" id="askZone" placeholder="Empty: use the zone in the question, or Delivery setup" autocomplete="off"></div>
+            <div class="field" style="flex:0 0 auto;justify-content:flex-end"><button type="button" class="primary" id="askBtn">Ask</button></div>
+          </div>
+          <div id="askAnswer" class="result"></div>
+        </div>
+
+        <div class="card" id="productData" hidden>
+          <div class="card-head">
+            <div>
+              <h3>Product data</h3>
+              <p id="productSummary"></p>
+            </div>
+          </div>
+          <h3 style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Chattrn needs</h3>
+          <div class="table-wrap"><table><thead><tr><th>Field</th><th>Needed</th><th>Found in</th><th>Sample</th></tr></thead><tbody id="needTable"></tbody></table></div>
+          <h3 style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Every field in the product list</h3>
+          <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Found in</th><th>Sample</th></tr></thead><tbody id="fieldTable"></tbody></table></div>
+          <div><button type="button" id="copy" class="plain" hidden>Copy report</button></div>
+        </div>
+      </section>
+
+      <!-- STEP 4: Delivery setup -->
+      <section data-panel="4" hidden style="display:flex;flex-direction:column;gap:20px">
+        <div class="card" id="deliveryCard">
+          <div class="card-head">
+            <div>
+              <div class="sec-title">Delivery zones</div>
+              <p class="hint" style="margin-top:4px">Zones, fees and minimum orders come from your store and stay in sync. Edit them in your store, not here.</p>
+            </div>
+            <span class="badge b-skip">Read from GET /delivery-zone</span>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Zone</th><th>Areas</th><th>Delivery fee</th><th>Minimum order</th><th>Products</th><th></th></tr></thead>
+            <tbody id="zoneRows"><tr><td colspan="6" class="hint">Press View all zones to read them from your API.</td></tr></tbody>
+          </table></div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button type="button" class="plain" id="loadZones" style="color:var(--brand)">View all zones</button>
+            <button type="button" class="plain" id="findParam" style="color:var(--brand)">Find zone parameter</button>
+            <span class="hint" id="zoneStatus"></span>
+          </div>
+        </div>
+
+        <div class="card">
+          <details>
+            <summary>Tester settings (not in the design)</summary>
+            <div class="row2" style="margin-top:12px">
+              <div class="field"><label for="ctxName">Send as query parameter</label><input type="text" id="ctxName" value="zoneId" autocomplete="off"><span class="hint" id="ctxHint"></span></div>
+              <div class="field"><label for="ctxValue">Area or outlet value</label><input type="text" id="ctxValue" placeholder="Pick a zone below, or type an ID" autocomplete="off"></div>
+            </div>
+          </details>
+        </div>
+
+        <div class="card">
+          <div>
+            <div class="sec-title">When should the AI ask for the area?</div>
+            <p class="hint" style="margin-top:4px">Asked once per customer. It's saved on the conversation, so a human agent sees it too.</p>
+          </div>
+          <label class="opt"><input type="radio" name="ask" checked><span><span class="opt-title">When the customer first asks about a product <span class="badge b-pink">Recommended</span></span><span class="hint" style="display:block">Order and policy questions don't need an area.</span></span></label>
+          <label class="opt"><input type="radio" name="ask"><span><span class="opt-title">At the start of every new chat</span><span class="hint" style="display:block">Simple, but adds a step for every customer.</span></span></label>
+          <label class="opt"><input type="radio" name="ask"><span><span class="opt-title">Use the area already picked on my website</span><span class="hint" style="display:block">Your website passes the area to the widget. Ask only if it's missing.</span></span></label>
+          <label class="opt" style="border-top:1px solid var(--line2);padding-top:14px"><input type="checkbox" checked><span class="opt-title">Remember the area for returning customers</span></label>
+        </div>
+      </section>
+
+      <div class="footer" style="border:0;padding:0;margin-top:0">
+        <button type="button" class="plain" id="back">Back</button>
+        <button type="button" class="primary" id="next">Continue: map fields with AI</button>
+        <span class="hint" id="finishNote" style="align-self:center"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var MONEY = /^\d+(\.\d+)?$/;
+  var ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+  var LISTKEYS = ["products", "data", "items", "results", "categories", "zones", "delivery_zones", "payment_methods", "methods", "orders", "banners"];
+  var state = { products: [], pageCount: 0, rowResults: {}, mode: "zone", ctxName: "zoneId", ctxValue: "", step: 1, tab: "product" };
+
+  var ROWS = [
+    { id: "products", group: "Required", name: "Product list", purpose: "Product sync", method: "GET", path: "/products?page=:page", kind: "list", required: true, context: true, params: { page: "1" } },
+    { id: "detail", group: "Required", name: "Product details", purpose: "Details, variants", method: "GET", path: "/products/:id", kind: "one", required: true, context: true, params: { id: "" } },
+    { id: "search", group: "Recommended", name: "Search", purpose: "Faster product search", method: "GET", path: "/search?q=:query", kind: "list", context: true, params: { query: "rice" } },
+    { id: "orders", group: "Recommended", name: "Orders by phone", purpose: "Order status (needs a signed-in customer)", method: "GET", path: "/orders?phone=:phone", kind: "list", params: { phone: "" } },
+    { id: "order", group: "Recommended", name: "Order details", purpose: "Tracking (needs a signed-in customer)", method: "GET", path: "/orders/:number", kind: "one", params: { number: "" } },
+    { id: "categories", group: "Optional", name: "Categories", purpose: "Browse by category", method: "GET", path: "/categories", kind: "list", params: {} },
+    { id: "zones", group: "Optional", name: "Delivery zones", purpose: "Delivery areas and fees", method: "GET", path: "/delivery-zone", kind: "list", params: {} },
+    { id: "payments", group: "Optional", name: "Payment methods", purpose: "Cash on delivery and others", method: "GET", path: "/payment-methods", kind: "list", params: {} },
+    { id: "brand", group: "Optional", name: "Brand", purpose: "Store name and logo", method: "GET", path: "/brand", kind: "one", params: {} }
+  ];
+
+  var CHECKS = [
+    { label: "Product id", paths: ["id"], need: "Required", level: "required" },
+    { label: "Title", paths: ["title", "name"], need: "Required", level: "required" },
+    { label: "Price (decimal string)", paths: ["price", "variants[].price"], need: "Required", level: "required", money: true },
+    { label: "Currency", paths: ["currency"], need: "Recommended (the store also sets one)", level: "recommended" },
+    { label: "Image", paths: ["image", "imageUrl", "images[].src", "images[]"], need: "Recommended", level: "recommended" },
+    { label: "Variants", paths: ["variants[]"], need: "Required if products have options", level: "recommended" },
+    { label: "Stock", paths: ["stock", "quantity", "inventory_quantity", "variants[].stock", "variants[].inventory_quantity"], need: "Required for live stock", level: "required" },
+    { label: "Updated at (ISO date)", paths: ["updated_at"], need: "Required for sync", level: "required", iso: true }
+  ];
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function isObj(v) { return v !== null && typeof v === "object" && !Array.isArray(v); }
+  function typeOf(v) {
+    if (v === null || v === undefined) return "null";
+    if (Array.isArray(v)) return "array";
+    if (typeof v === "object") return "object";
+    if (typeof v === "number") return "number";
+    if (typeof v === "boolean") return "boolean";
+    if (MONEY.test(v)) return "decimal string";
+    if (ISO.test(v)) return "ISO date";
+    return "string";
+  }
+  function short(v) {
+    var s = typeof v === "object" && v !== null ? JSON.stringify(v) : String(v);
+    return s.length > 70 ? s.slice(0, 70) + "…" : s;
+  }
+
+  function extractList(body) {
+    if (Array.isArray(body)) return { list: body, key: "(top-level array)" };
+    if (isObj(body)) {
+      for (var i = 0; i < LISTKEYS.length; i++) {
+        if (Array.isArray(body[LISTKEYS[i]])) return { list: body[LISTKEYS[i]], key: LISTKEYS[i] };
+      }
+      for (var k in body) { if (Array.isArray(body[k])) return { list: body[k], key: k }; }
+    }
+    return null;
+  }
+  function extractOne(body) {
+    if (!isObj(body)) return null;
+    if (isObj(body.product)) return body.product;
+    if (isObj(body.data)) return body.data;
+    return body;
+  }
+
+  function fieldMap(records) {
+    var map = {};
+    function add(path, v, seen) {
+      if (seen.has(path)) return;
+      seen.add(path);
+      var m = map[path] || (map[path] = { count: 0, types: {}, sample: undefined });
+      m.count++;
+      m.types[typeOf(v)] = true;
+      if (m.sample === undefined && v !== null && v !== undefined) m.sample = v;
+    }
+    records.forEach(function (rec) {
+      if (!isObj(rec)) return;
+      var seen = new Set();
+      Object.keys(rec).forEach(function (k) {
+        var v = rec[k];
+        if (Array.isArray(v) && v.length && isObj(v[0])) {
+          add(k + "[]", v, seen);
+          v.forEach(function (item) {
+            if (isObj(item)) Object.keys(item).forEach(function (sub) { add(k + "[]." + sub, item[sub], seen); });
+          });
+        } else if (isObj(v)) {
+          add(k, v, seen);
+          Object.keys(v).forEach(function (sub) { add(k + "." + sub, v[sub], seen); });
+        } else {
+          add(k, v, seen);
+        }
+      });
+    });
+    return map;
+  }
+
+  function findPath(map, paths) {
+    for (var i = 0; i < paths.length; i++) { if (map[paths[i]]) return paths[i]; }
+    return null;
+  }
+
+  function chip(status) {
+    var label = { pass: "Responded", warn: "Needs attention", fail: "Error", skip: "Not tested" }[status];
+    return '<span class="chip s-' + status + '">' + label + "</span>";
+  }
+
+  function rowEl(r) { return document.querySelector('[data-row="' + r.id + '"]'); }
+
+  function buildRows() {
+    var html = "";
+    var lastGroup = "";
+    ROWS.forEach(function (r) {
+      if (r.group !== lastGroup) {
+        html += '<div class="group-label" style="margin-top:14px">' + esc(r.group) + "</div>";
+        lastGroup = r.group;
+      }
+      var params = Object.keys(r.params).length
+        ? '<div class="params">' + Object.keys(r.params).map(function (p) {
+            return '<div class="field"><label for="p-' + r.id + "-" + p + '">:' + esc(p) + '</label><input type="text" id="p-' + r.id + "-" + p + '" data-param="' + esc(p) + '" value="' + esc(r.params[p]) + '" autocomplete="off"></div>';
+          }).join("") + "</div>"
+        : "";
+      html += '<div class="ep" data-row="' + r.id + '"' + (r.context ? ' data-context="1"' : '') + '>' +
+        '<div><div class="name">' + esc(r.name) + '</div><div class="purpose">' + esc(r.purpose) + "</div></div>" +
+        '<div><div class="pathline"><span class="method">' + r.method + '</span><input type="text" data-path value="' + esc(r.path) + '" aria-label="Path for ' + esc(r.name) + '" autocomplete="off"></div>' +
+        params +
+        '<div class="row-actions"><button type="button" class="plain" data-test>Test</button></div>' +
+        '<div class="result" data-result></div></div>' +
+        '<div class="ep-status"><span data-chip>' + chip("skip") + "</span></div>" +
+        "</div>";
+    });
+    html += '<div class="group-label" style="margin-top:14px">Optional: turns on more actions</div>' +
+      '<div class="ep"><div><div class="name">Cart price check</div><div class="purpose">Cart and coupons</div></div>' +
+      '<div><div class="pathline"><span class="method" style="color:var(--fail)">POST</span><input type="text" value="/cart/quote" disabled></div><div class="hint" style="margin-top:6px">Not tested here: it needs a signed-in customer.</div></div>' +
+      '<div class="ep-status"><b class="miss">Not tested</b>Endpoint needs a signed-in customer</div></div>';
+    $("rows").innerHTML = html;
+    document.querySelectorAll("[data-test]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.closest("[data-row]").getAttribute("data-row");
+        runOne(ROWS.filter(function (r) { return r.id === id; })[0]);
+      });
+    });
+  }
+
+  function authHeaders() {
+    var mode = $("auth").value;
+    var key = $("key").value.trim();
+    var h = { Accept: "application/json" };
+    if (mode === "key" && key) h[$("header").value.trim() || "X-API-Key"] = key;
+    if (mode === "bearer" && key) h.Authorization = "Bearer " + key;
+    return h;
+  }
+
+  function get(url) {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, 15000);
+    var t0 = performance.now();
+    return fetch(url, { headers: authHeaders(), signal: ctrl.signal, cache: "no-store" })
+      .then(function (r) {
+        return r.text().then(function (text) {
+          var body = null;
+          try { body = text ? JSON.parse(text) : null; } catch (e) { body = null; }
+          return { ok: true, http: r.status, ms: Math.round(performance.now() - t0), body: body, text: text, isJson: body !== null };
+        });
+      })
+      .catch(function (e) {
+        return { ok: false, ms: Math.round(performance.now() - t0), error: e && e.name === "AbortError" ? "Timed out after 15 seconds." : "Network error. The request did not reach the store, or the browser blocked it." };
+      })
+      .finally(function () { clearTimeout(timer); });
+  }
+
+  function buildUrl(r, row, pageOverride) {
+    var path = row.querySelector("[data-path]").value.trim();
+    if (!path) return { error: "Enter a path." };
+    var names = (path.match(/:(\w+)/g) || []).map(function (s) { return s.slice(1); });
+    var values = {};
+    var missing = [];
+    names.forEach(function (n) {
+      var input = row.querySelector('[data-param="' + n + '"]');
+      var v = input ? input.value.trim() : "";
+      if (n === "page") v = pageOverride != null ? String(pageOverride) : (v || "1");
+      if (n === "id" && !v) v = state.products[0] ? String(state.products[0].id) : "";
+      if (!v) missing.push(n);
+      values[n] = v;
+    });
+    if (missing.length) return { error: "Fill in " + missing.map(function (m) { return ":" + m; }).join(", ") + " first." };
+    var base = $("base").value.trim().replace(/\/+$/, "");
+    if (!/^https?:\/\/[^\s/]+/.test(base)) return { error: "Enter the base URL first." };
+    var filled = path.replace(/:(\w+)/g, function (_, n) { return encodeURIComponent(values[n]); });
+    var extra = "";
+    if (row.hasAttribute("data-context") && state.ctxName && state.ctxValue) {
+      extra = (filled.indexOf("?") >= 0 ? "&" : "?") + encodeURIComponent(state.ctxName) + "=" + encodeURIComponent(state.ctxValue);
+    }
+    return { url: base + filled + extra, path: filled + extra };
+  }
+
+  async function callRow(r, row, pageOverride) {
+    var built = buildUrl(r, row, pageOverride);
+    if (built.error) return { status: "skip", message: built.error };
+    var res = await get(built.url);
+    var out = { status: "pass", url: built.url, ms: res.ms, http: res.http, raw: res.text || "", records: null, listKey: null, message: "" };
+    if (!res.ok) { out.status = "fail"; out.message = res.error; out.http = null; return out; }
+    if (res.http === 401 || res.http === 403) { out.status = "warn"; out.message = "HTTP " + res.http + ": the store needs sign-in or a key for this endpoint, and it was not accepted."; return out; }
+    if (res.http === 404) { out.status = "fail"; out.message = "HTTP 404: this endpoint doesn't exist on the store. Check the path."; return out; }
+    if (res.http >= 500) { out.status = "fail"; out.message = "HTTP " + res.http + ": the store had a server error."; return out; }
+    if (res.http !== 200) { out.status = "fail"; out.message = "HTTP " + res.http + ": expected 200."; return out; }
+    if (!res.isJson) { out.status = "fail"; out.message = "HTTP 200, but the body is not JSON. The path probably points at a web page."; return out; }
+    if (r.kind === "list") {
+      var found = extractList(res.body);
+      if (!found) { out.status = "warn"; out.message = "Responded, but no list was found. Top-level keys: " + (isObj(res.body) ? Object.keys(res.body).join(", ") : "none") + "."; return out; }
+      out.records = found.list; out.listKey = found.key;
+      out.message = found.list.length + " record(s) in \"" + found.key + "\".";
+      if (found.list.length === 0) { out.status = "warn"; out.message = "Responded with an empty list (\"" + found.key + "\")."; }
+    } else {
+      var one = extractOne(res.body);
+      out.records = one ? [one] : [];
+      out.message = one ? "One record returned." : "Responded, but the body is not an object.";
+      if (!one) out.status = "warn";
+    }
+    return out;
+  }
+
+  function renderRow(r, res) {
+    var row = rowEl(r);
+    row.querySelector("[data-chip]").innerHTML = chip(res.status);
+    var box = row.querySelector("[data-result]");
+    var meta = [];
+    if (res.http != null) meta.push("HTTP " + res.http);
+    if (res.ms != null) meta.push(res.ms + " ms");
+    if (res.url) meta.push(res.url);
+    var fields = "";
+    if (res.records && res.records.length) {
+      var map = fieldMap(res.records);
+      var keys = Object.keys(map).sort();
+      fields = '<details><summary>Show ' + keys.length + " fields from " + res.records.length + " record(s)</summary>" +
+        '<div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>Field</th><th>Type</th><th>Found in</th><th>Sample</th></tr></thead><tbody>' +
+        keys.slice(0, 120).map(function (k) {
+          var m = map[k];
+          return '<tr><td class="mono">' + esc(k) + "</td><td>" + esc(Object.keys(m.types).join(" / ")) + "</td><td>" + m.count + " of " + res.records.length + '</td><td class="val mono">' + esc(m.sample === undefined ? "" : short(m.sample)) + "</td></tr>";
+        }).join("") + "</tbody></table></div></details>";
+    }
+    var raw = res.raw ? '<details><summary>Show response</summary><pre>' + esc(res.raw.slice(0, 5000)) + "</pre></details>" : "";
+    box.innerHTML = (res.message ? "<div>" + esc(res.message) + "</div>" : "") +
+      (meta.length ? '<div class="meta">' + esc(meta.join(" · ")) + "</div>" : "") + fields + raw;
+  }
+
+  async function runOne(r) {
+    var row = rowEl(r);
+    var btn = row.querySelector("[data-test]");
+    btn.disabled = true;
+    var res;
+    if (r.id === "products") res = await readAllProductPages();
+    else res = await callRow(r, row);
+    state.rowResults[r.id] = res;
+    if (r.id === "products" && res.records) {
+      state.products = res.records;
+      var firstDetail = rowEl(ROWS[1]).querySelector("[data-param=\"id\"]");
+      if (firstDetail && !firstDetail.value && res.records[0] && res.records[0].id != null) {
+        firstDetail.placeholder = "first product: " + res.records[0].id;
+      }
+    }
+    renderRow(r, res);
+    btn.disabled = false;
+    updateSummary();
+    if (r.id === "products") renderProducts();
+    if (r.id === "products" || r.id === "zones") state.suggested = { product: false, variant: false, zone: false };
+    renderMap();
+    return res;
+  }
+
+  async function readAllProductPages() {
+    var r = ROWS[0];
+    var row = rowEl(r);
+    var max = Math.max(1, Math.min(50, parseInt($("pages").value, 10) || 1));
+    var all = [];
+    var first = null;
+    var lastKey = null;
+    var lastRes = null;
+    var p;
+    for (p = 1; p <= max; p++) {
+      setProgress("Reading product page " + p + " of up to " + max + "…");
+      var res = await callRow(r, row, p);
+      lastRes = res;
+      if (p === 1) first = res;
+      if (res.status === "skip" || res.status === "fail" || !res.records) break;
+      lastKey = res.listKey;
+      if (res.records.length === 0) break;
+      all = all.concat(res.records);
+    }
+    state.pageCount = p - 1;
+    setProgress("");
+    if (!first || !first.records) return first || lastRes;
+    var out = Object.assign({}, first);
+    out.records = all;
+    out.listKey = lastKey || first.listKey;
+    out.message = all.length + " product(s) across " + state.pageCount + " page(s) in \"" + out.listKey + "\".";
+    if (all.length === 0) {
+      out.status = "warn";
+      out.message = state.ctxValue
+        ? "Responded, but no products came back for " + state.ctxName + "=" + state.ctxValue + ". Try another zone or outlet, or open Show response."
+        : "No products came back, and no zone or outlet was sent. Pick a zone or outlet in Delivery setup, then test again.";
+    } else {
+      out.status = "pass";
+    }
+    if (all.length === 0 && first.records && first.records.length === 0) out.raw = first.raw;
+    return out;
+  }
+
+  function setProgress(t) { $("productSummary").textContent = t; }
+
+  function setRunning(on) {
+    document.querySelectorAll(".runAll").forEach(function (b) { b.disabled = on; });
+  }
+
+  async function testAll() {
+    setRunning(true);
+    state.rowResults = {};
+    state.products = [];
+    for (var i = 0; i < ROWS.length; i++) {
+      var r = ROWS[i];
+      if (r.id === "detail" && !state.products.length) {
+        var skip = { status: "skip", message: "Skipped: no product to look up. Product list must return products first." };
+        state.rowResults.detail = skip;
+        renderRow(r, skip);
+        rowEl(r).querySelector("[data-chip]").innerHTML = chip("skip");
+        continue;
+      }
+      await runOne(r);
+    }
+    setRunning(false);
+  }
+
+  var TONE = { pass: ["✓", "Passed"], warn: ["!", "Needs attention"], fail: ["✕", "Failed"], skip: ["–", "Not tested"] };
+
+  function crow(tone, title, desc, badgeText) {
+    return '<div class="crow"><span class="ico ico-' + tone + '">' + TONE[tone][0] + '</span>' +
+      '<div class="crow-body"><div class="crow-title">' + esc(title) + '</div><div class="hint">' + esc(desc) + "</div></div>" +
+      '<span class="badge b-' + tone + '">' + esc(badgeText || TONE[tone][1]) + "</span></div>";
+  }
+
+  function endpointRow(title, id, okText) {
+    var x = state.rowResults[id];
+    if (!x) return crow("skip", title, "Not run yet. Run the tests first.");
+    var tone = x.status === "pass" ? "pass" : x.status === "warn" ? "warn" : x.status === "fail" ? "fail" : "skip";
+    return crow(tone, title, x.status === "pass" ? okText : (x.message || ""));
+  }
+
+  function renderTestPanel() {
+    var el = $("testPanel");
+    if (!el) return;
+    var res = state.rowResults;
+    var pr = res.products;
+    var base = $("base").value.trim();
+    var connected = !!(pr && pr.status === "pass" && state.products.length);
+    var host = base;
+    try { host = new URL(base).host; } catch (e) { /* keep raw text */ }
+    var brandRec = res.brand && res.brand.records && res.brand.records[0];
+    var storeName = brandRec ? textOf(brandRec.name || brandRec.title || brandRec.brand) : "";
+    var runBtn = '<button type="button" id="runAgain" style="background:#1c8274;color:#fff">Run test again</button>';
+    var banner;
+    if (connected) {
+      banner = '<div class="banner ok"><span class="ico ico-pass big">✓</span>' +
+        '<div class="banner-body"><div class="sec-title">Connected to ' + esc(storeName || host) + '</div><div class="hint mono">' + esc(base) + "</div></div>" + runBtn + "</div>";
+    } else if (!pr) {
+      banner = '<div class="banner"><span class="ico ico-skip big">–</span>' +
+        '<div class="banner-body"><div class="sec-title">Not tested yet</div><div class="hint">Run the tests to check the connection.</div></div>' + runBtn + "</div>";
+    } else {
+      banner = '<div class="banner warn"><span class="ico ico-warn big">!</span>' +
+        '<div class="banner-body"><div class="sec-title">Not connected yet</div><div class="hint">Products are not coming through. Check the base URL and sign-in in step 1, then run the tests again.</div></div>' + runBtn + "</div>";
+    }
+
+    var list = [
+      ["Store profile", "brand", "Brand read from the store."],
+      ["Catalog", "products", state.products.length + " product(s) read with variants and images where present."],
+      ["Product search", "search", "Search returned matching products."],
+      ["Live stock and price", "detail", "Stock and price returned for a product."],
+      ["Order lookup", "orders", "The order list endpoint responded."],
+      ["Order details", "order", "Status, items and tracking returned."]
+    ];
+    var tally = { pass: 0, warn: 0, fail: 0, skip: 0 };
+    list.forEach(function (x) { var r = res[x[1]]; tally[r ? r.status : "skip"]++; });
+    tally.skip += 2;
+    var rowsHtml = list.map(function (x) { return endpointRow(x[0], x[1], x[2]); }).join("") +
+      crow("skip", "Cart quote", "Not tested here. Cart, coupons and checkout in chat stay off until this endpoint is added.") +
+      crow("skip", "Cancel order and update order", "Not tested here. These change orders, so the tester does not call them.");
+    var counts = tally.pass + " passed · " + (tally.warn + tally.fail) + " needs attention · " + tally.skip + " not tested";
+
+    var recs = state.products;
+    var dq;
+    if (!recs.length) {
+      dq = '<p class="hint">Run the tests to check the data quality.</p>';
+    } else {
+      var mapped = recs.map(mapProduct);
+      var priceOk = mapped.filter(function (m) { return m.price != null && MONEY.test(String(m.price)); }).length;
+      var stockMissing = mapped.filter(function (m) { return m.stock === null; }).length;
+      var withVariantStock = mapped.filter(function (m) { return m.variants.some(function (v) { return v.stock !== null; }); }).length;
+      var withImage = mapped.filter(function (m) { return m.image != null && m.image !== ""; }).length;
+      var q = [];
+      q.push(priceOk === recs.length
+        ? crow("pass", "Prices are numbers", "All " + recs.length + " products have a usable price.")
+        : crow("warn", "Prices are missing or not numbers", (recs.length - priceOk) + " product(s) have no usable price."));
+      q.push(stockMissing
+        ? crow("warn", "Stock is missing on " + stockMissing + " product(s)", "The AI will say \"check availability\" for these.")
+        : crow("pass", "Stock found on every product", "Every product has a stock figure."));
+      q.push(withVariantStock
+        ? crow("pass", "Variants have their own stock", "Stock found on variants of " + withVariantStock + " product(s).")
+        : crow("skip", "Variant stock", "No variant stock was sent."));
+      q.push(withImage === recs.length
+        ? crow("pass", "Images load", "Every product has at least one image.")
+        : crow("warn", "Some products have no image", withImage + " of " + recs.length + " have at least one image."));
+      q.push(pr && pr.status === "pass"
+        ? crow("pass", "All pages load", "Pages 1 to " + (state.pageCount || 1) + " read without errors.")
+        : crow("warn", "Not all pages read", "Check the product list in step 1."));
+      var ms = res.detail && res.detail.ms;
+      if (ms != null) {
+        q.push(ms <= 1000
+          ? crow("pass", "Live stock check speed", "One product read took " + ms + " ms.")
+          : crow("warn", "Live stock check is slow", "One product read took " + ms + " ms. Customers will see \"checking with the store…\". Aim for under 1 s."));
+      }
+      dq = q.join("");
+    }
+
+    var sample = recs.slice(0, 3).map(function (p) {
+      var m = mapProduct(p);
+      var name = textOf(m.title) || String(m.id);
+      var priceCell = m.price != null ? "৳ " + esc(m.price) : '<span class="miss">not sent</span>';
+      var was = m.compare_at_price != null ? ' <span style="text-decoration:line-through;color:var(--muted2)">৳ ' + esc(m.compare_at_price) + "</span>" : "";
+      var opts = m.variants.map(function (v) { return textOf(v.title); }).filter(Boolean).join(" · ") || "None";
+      var st = m.stock === null ? ["warn", "Stock not sent"] : m.stock > 0 ? ["pass", "In stock"] : ["fail", "Out of stock"];
+      return "<tr><td><strong>" + esc(name) + '</strong></td><td class="mono">' + priceCell + was + "</td><td>" + esc(opts) +
+        '</td><td><span class="badge b-' + st[0] + '">' + esc(st[1]) + "</span></td></tr>";
+    }).join("");
+
+    var first = recs[0];
+    var fields = first ? MAP_DEFS.product.map(function (d) {
+      var b = rowBadge("product", d, first);
+      if (b[0] === "pass") return '<span class="badge b-pass">✓ ' + esc(d.label) + "</span>";
+      if (b[0] === "skip") return '<span class="badge b-skip">' + esc(d.label) + " (optional)</span>";
+      return '<span class="badge b-warn">! ' + esc(d.label) + (d.level === "optional" ? " (optional)" : "") + "</span>";
+    }).join(" ") : "";
+
+    el.innerHTML = banner +
+      '<div class="card"><div class="card-head"><div><div class="sec-title">Test results</div><div class="hint" style="margin-top:4px">' + esc(counts) + "</div></div></div>" +
+        rowsHtml + "</div>" +
+      '<div class="card"><div class="card-head"><div><div class="sec-title">Data quality</div>' +
+        '<div class="hint" style="margin-top:4px">An endpoint can answer and still send data the AI can\'t use well. These checks catch that before customers do.</div></div>' +
+        (recs.length ? '<span class="badge b-skip">Checked on ' + recs.length + " product(s)</span>" : "") + "</div>" +
+        dq + "</div>" +
+      '<div class="card"><div><div class="sec-title">Sample products from your API</div>' +
+        '<div class="hint" style="margin-top:4px">Check these look right. This is how the AI Agent and the inbox will see your products.</div></div>' +
+        (recs.length
+          ? '<div class="table-wrap"><table><thead><tr><th>Product</th><th>Price</th><th>Variants</th><th>Stock</th></tr></thead><tbody>' + sample + "</tbody></table></div>" +
+            '<div class="fields-wrap"><strong>Fields Chattrn understood</strong><div class="fields-list">' + fields + "</div></div>"
+          : '<p class="hint">No products read yet.</p>') +
+      "</div>";
+  }
+
+  function updateSummary() { renderTestPanel(); }
+
+  function recCount(id) { var x = state.rowResults[id]; return x && x.records ? x.records.length : 0; }
+
+  function renderProducts() {
+    var records = state.products;
+    if (!records.length) { $("productData").hidden = true; return; }
+    $("productData").hidden = false;
+    $("productSummary").textContent = records.length + " product(s) read across " + (state.pageCount || 1) + " page(s).";
+    var map = fieldMap(records);
+    var need = CHECKS.map(function (c) {
+      var path = findPath(map, c.paths);
+      var found = path ? map[path].count : 0;
+      var status;
+      if (!path) status = c.level === "required" ? "fail" : "warn";
+      else if (found < records.length) status = "warn";
+      else status = "pass";
+      var cell = status === "pass" ? '<span class="ok">Every product</span>' : status === "warn" ? '<span class="part">' + (path ? found + " of " + records.length : "Not in any product") + "</span>" : '<span class="miss">Missing</span>';
+      var sample = path && map[path].sample !== undefined ? short(map[path].sample) : "";
+      var moneyNote = "";
+      if (c.money && path) {
+        var nums = 0;
+        records.forEach(function (rec) { var v = rec[path]; if (typeof v === "number") nums++; });
+        if (nums) moneyNote = " (" + nums + " sent as a number, not a string)";
+      }
+      return "<tr><td>" + esc(c.label) + "</td><td>" + esc(c.need) + "</td><td>" + cell + (path ? '<div class="hint mono">' + esc(path) + esc(moneyNote) + "</div>" : "") + '</td><td class="val mono">' + esc(sample) + "</td></tr>";
+    }).join("");
+    $("needTable").innerHTML = need;
+    var keys = Object.keys(map).sort();
+    $("fieldTable").innerHTML = keys.slice(0, 200).map(function (k) {
+      var m = map[k];
+      var cls = m.count === records.length ? "ok" : "part";
+      return '<tr><td class="mono">' + esc(k) + "</td><td>" + esc(Object.keys(m.types).join(" / ")) + '</td><td><span class="' + cls + '">' + m.count + " of " + records.length + '</span></td><td class="val mono">' + esc(m.sample === undefined ? "" : short(m.sample)) + "</td></tr>";
+    }).join("");
+    $("copy").hidden = false;
+  }
+
+  var STOP = ("what is the of in for a an and or do you have there me tell about from to at on can i it which how much " +
+    "quantity stock available availability price cost this that its be get does any are when where also please show check " +
+    "product products item items is it's how many left").split(" ");
+
+  function zoneFromQuestion(q) {
+    var m = q.match(/\b(?:zone|area|outlet)\s*([\w-]+)/i);
+    return m ? m[1] : "";
+  }
+
+  function questionWords(q) {
+    var cleaned = q.replace(/\b(?:zone|area|outlet)\s*[\w-]+/ig, " ").toLowerCase();
+    return cleaned.split(/[\s,.?!;:()\/"'`]+/).filter(function (w) {
+      return w.length >= 2 && STOP.indexOf(w) < 0;
+    });
+  }
+
+  function haystack(p) {
+    var variants = Array.isArray(p.variants) ? p.variants : [];
+    var parts = [p.title, p.name, p.vendor, p.brand, p.product_type, p.category,
+      Array.isArray(p.tags) ? p.tags.join(" ") : p.tags];
+    variants.forEach(function (v) {
+      if (isObj(v)) parts.push([v.title, v.sku, v.option1, v.option2, v.option3].join(" "));
+    });
+    return parts.filter(Boolean).join(" ").toLowerCase();
+  }
+
+  function rawBox(t) {
+    return t ? '<details><summary>Show response</summary><pre>' + esc(String(t).slice(0, 5000)) + "</pre></details>" : "";
+  }
+
+  function askBox(html) { $("askAnswer").innerHTML = html; }
+
+  var CHIP = {
+    avail: ["pass", "Available"],
+    out: ["fail", "Out of stock"],
+    unknown: ["warn", "Stock not sent"],
+    nozone: ["warn", "Not in this zone"],
+    error: ["fail", "Error"]
+  };
+
+  function textOf(v) {
+    if (v === null || v === undefined) return "";
+    if (typeof v === "object") return String(v.name || v.title || v.value || "");
+    return String(v);
+  }
+
+  function resolveZone(value) {
+    if (!value) return "";
+    var recs = recordsFor("zone");
+    if (!recs.length) return value;
+    var ids = recs.map(function (z) { return String(pick(z, "zone", "zid")); });
+    if (ids.indexOf(value) >= 0) return value;
+    var lower = value.toLowerCase();
+    for (var i = 0; i < recs.length; i++) {
+      var n = String(pick(recs[i], "zone", "zname") || "").toLowerCase();
+      if (n && (n === lower || n.indexOf(lower) >= 0)) return String(pick(recs[i], "zone", "zid"));
+    }
+    return value;
+  }
+
+  // Reads one product for the zone using the field mapping, and returns its card HTML and status.
+  async function checkOne(p, zone, zName) {
+    var base = $("base").value.trim().replace(/\/+$/, "");
+    var url = base + "/products/" + encodeURIComponent(p.id) +
+      (zone ? "?" + encodeURIComponent(zName) + "=" + encodeURIComponent(zone) : "");
+    var title = p.title || p.name || String(p.id);
+    var res = await get(url);
+    var status;
+    var body = "";
+    var m = null;
+    var det = {};
+    if (!res.ok) { status = "error"; body = "<div>" + esc(res.error) + "</div>"; }
+    else if (res.http === 404) {
+      status = "nozone";
+      body = "<div>" + (zone ? "This product is not returned for " + esc(zName + " = " + zone) + " (HTTP 404)." : "HTTP 404 for this product.") + "</div>";
+    }
+    else if (res.http !== 200 || !res.isJson) { status = "error"; body = "<div>HTTP " + res.http + ": could not read this product.</div>"; }
+    else {
+      det = extractOne(res.body) || {};
+      m = mapProduct(det);
+      var variants = m.variants;
+      var flagKey = null;
+      ["instock", "in_stock", "isavailable", "available"].forEach(function (k) {
+        if (flagKey === null && typeof det[k] === "boolean") flagKey = k;
+      });
+      var flag = flagKey ? det[flagKey] : null;
+      var total = m.stock;
+      if (total !== null) status = total > 0 ? "avail" : "out";
+      else if (flag !== null) status = flag ? "avail" : "out";
+      else status = "unknown";
+
+      var priceText = "";
+      if (m.price != null) priceText = m.price + (m.currency ? " " + textOf(m.currency) : "");
+      else {
+        var nums = variants.map(function (v) { return parseFloat(v.price); }).filter(function (x) { return !isNaN(x); });
+        if (nums.length) {
+          var lo = Math.min.apply(null, nums), hi = Math.max.apply(null, nums);
+          priceText = (lo === hi ? lo.toFixed(2) : lo.toFixed(2) + " to " + hi.toFixed(2)) + (m.currency ? " " + textOf(m.currency) : "");
+        }
+      }
+
+      var stockText;
+      if (total !== null) {
+        stockText = "<strong>" + esc(total) + "</strong> available" +
+          (variants.length > 1 ? " (" + variants.filter(function (v) { return v.stock !== null && v.stock > 0; }).length + " of " + variants.length + " variants in stock)" : "");
+      } else if (flag !== null) {
+        stockText = flag ? "<strong>In stock</strong> (quantity not sent, only the yes/no flag " + esc(flagKey) + ")" : "Out of stock (" + esc(flagKey) + " is false)";
+      } else {
+        stockText = '<span class="miss">not in the response</span>';
+      }
+
+      var pf = getMapped("product", "price");
+      var sf = getMapped("product", "stock");
+      var mapNote = "Price from " + (pf.primary ? esc(pf.primary) : '<span class="miss">not mapped</span>') +
+        " · Stock from " + (sf.primary ? esc(sf.primary) : '<span class="miss">not mapped</span>');
+
+      body = "<div>Price: " + (priceText ? "<strong>" + esc(priceText) + "</strong>" : '<span class="miss">not in the response</span>') + "</div>" +
+        "<div>Available: " + stockText + "</div>" +
+        '<div class="hint">' + mapNote + "</div>";
+      if (variants.length) {
+        body += '<div class="table-wrap" style="margin-top:6px"><table><thead><tr><th>Variant</th><th>Price</th><th>Available</th></tr></thead><tbody>' +
+          variants.map(function (v) {
+            return "<tr><td>" + esc(textOf(v.title) || v.sku || v.id) + '</td><td class="mono">' + esc(v.price != null ? v.price : "") +
+              '</td><td class="mono">' + esc(v.stock != null ? v.stock : "not sent") + "</td></tr>";
+          }).join("") + "</tbody></table></div>";
+      }
+    }
+    var chipInfo = CHIP[status];
+    var brand = m ? textOf(m.vendor) : textOf(det.vendor || det.brand || p.vendor || p.brand);
+    var type = m ? textOf(m.product_type) : textOf(det.product_type || p.product_type);
+    var html = '<article class="card" style="padding:14px">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:flex-start">' +
+      "<div><strong>" + esc(textOf(det.title || det.name) || title) + "</strong>" +
+      (brand || type ? '<div class="hint">' + esc([brand, type].filter(Boolean).join(" · ")) + "</div>" : "") + "</div>" +
+      '<span class="chip s-' + chipInfo[0] + '">' + chipInfo[1] + "</span></div>" +
+      '<div style="display:flex;flex-direction:column;gap:4px;margin-top:8px;font-size:13px">' + body + "</div>" +
+      '<div class="meta" style="margin-top:6px">From ' + esc(url) + (res.http != null ? " · HTTP " + res.http : "") + (res.ms != null ? " · " + res.ms + " ms" : "") + "</div>" +
+      rawBox(res.text) + "</article>";
+    return { status: status, html: html };
+  }
+
+  async function askOpen() {
+    var q = $("askText").value.trim();
+    if (!q) { askBox("<div>Type a question first.</div>"); return; }
+    if (!state.products.length) {
+      askBox('<div>No products are loaded yet. Press "Run all tests" first, so the tester has the product list.</div>');
+      return;
+    }
+    var zone = resolveZone($("askZone").value.trim() || zoneFromQuestion(q) || state.ctxValue);
+    var zName = $("ctxName").value.trim() || "zoneId";
+    var words = questionWords(q);
+    var scored = state.products.map(function (p) {
+      var h = haystack(p);
+      var s = words.filter(function (w) { return h.indexOf(w) >= 0; }).length;
+      return { p: p, s: s };
+    });
+    var cands = words.length
+      ? scored.filter(function (x) { return x.s > 0; }).sort(function (a, b) { return b.s - a.s; })
+      : scored;
+    if (!cands.length) {
+      askBox("<div>No loaded product matches the words in your question (" + esc(words.join(", ")) + "). The list has " + state.products.length + " products. Try a different word, like the brand or the type of product.</div>");
+      return;
+    }
+    var shown = cands.slice(0, 12).map(function (x) { return x.p; });
+    var scope = zone ? "for " + zName + " = " + zone : "with no zone sent, so results are store-wide";
+    askBox('<div class="hint" id="askProgress">Checking ' + shown.length + " of " + cands.length + " matching product(s) " + esc(scope) + "…</div>" +
+      '<div id="askCards" style="display:flex;flex-direction:column;gap:10px;margin-top:10px"></div>');
+    var counts = { avail: 0, out: 0, unknown: 0, nozone: 0, error: 0 };
+    for (var i = 0; i < shown.length; i++) {
+      var r = await checkOne(shown[i], zone, zName);
+      counts[r.status]++;
+      $("askCards").insertAdjacentHTML("beforeend", r.html);
+    }
+    var head = shown.length + " of " + cands.length + " matching product(s) checked " + scope + ". " +
+      counts.avail + " available, " + counts.out + " out of stock, " + counts.nozone + " not in this zone, " +
+      counts.unknown + " with no stock figure, " + counts.error + " with an error.";
+    $("askProgress").outerHTML = '<div style="font-weight:600">' + esc(head) + "</div>";
+  }
+
+  // ---- Map the API fields -------------------------------------------------
+  var MAP_DEFS = {
+    product: [
+      { key: "id", label: "Product ID", chattrn: "product.id", level: "required", syn: ["id", "productid", "product_id"] },
+      { key: "title", label: "Title", chattrn: "product.title", level: "required", syn: ["title", "name", "productname"] },
+      { key: "price", label: "Selling price", chattrn: "product.price", level: "required", money: true,
+        syn: ["sellprice", "sellingprice", "saleprice", "discountprice", "price", "currentprice"], fallbackSyn: ["price", "regularprice"] },
+      { key: "compare", label: "Was price", chattrn: "product.compare_at_price", level: "optional", money: true,
+        syn: ["compareprice", "compareatprice", "originalprice", "regularprice", "wasprice"] },
+      { key: "currency", label: "Currency", chattrn: "product.currency", level: "recommended", syn: ["currency", "currencycode"] },
+      { key: "stock", label: "Total stock", chattrn: "product.stock", level: "required",
+        syn: ["totalstock", "inventoryquantity", "quantity", "stock", "available", "stockquantity"] },
+      { key: "image", label: "Image", chattrn: "product.images", level: "recommended", syn: ["images", "image", "imageurl", "thumbnail", "photo"] },
+      { key: "updated", label: "Updated at", chattrn: "product.updated_at", level: "required", iso: true, syn: ["updatedat", "modifiedat", "lastupdated"] },
+      { key: "vendor", label: "Brand / vendor", chattrn: "product.vendor", level: "optional", syn: ["vendor", "brand", "manufacturer"] },
+      { key: "type", label: "Product type", chattrn: "product.product_type", level: "optional", syn: ["producttype", "category", "type"] },
+      { key: "variants", label: "Variants list", chattrn: "product.variants", level: "recommended", syn: ["variants", "variations", "options"] }
+    ],
+    variant: [
+      { key: "vid", label: "Variant ID", chattrn: "variant.id", level: "required", syn: ["id", "variantid"] },
+      { key: "vtitle", label: "Variant title", chattrn: "variant.title", level: "required", syn: ["title", "name", "variantname", "label"] },
+      { key: "vprice", label: "Variant price", chattrn: "variant.price", level: "required", money: true,
+        syn: ["sellprice", "sellingprice", "discountprice", "price"], fallbackSyn: ["price"] },
+      { key: "vcompare", label: "Variant was price", chattrn: "variant.compare_at_price", level: "optional", money: true,
+        syn: ["compareprice", "compareatprice", "originalprice"] },
+      { key: "vstock", label: "Variant stock", chattrn: "variant.inventory_quantity", level: "required",
+        syn: ["stock", "quantity", "available", "inventoryquantity", "totalstock"] },
+      { key: "vsku", label: "SKU", chattrn: "variant.sku", level: "optional", syn: ["sku", "code"] },
+      { key: "vinv", label: "Inventory item ID", chattrn: "variant.inventory_item_id", level: "recommended", syn: ["inventoryitemid", "inventoryid"] }
+    ],
+    zone: [
+      { key: "zid", label: "Zone ID", chattrn: "location.id (sent as the zone parameter)", level: "required", syn: ["zoneid", "zone_id", "id", "code", "areaid"] },
+      { key: "zname", label: "Zone name", chattrn: "location.name", level: "required", syn: ["zonename", "name", "title", "area", "zone"] }
+    ]
+  };
+  var SCOPE_LABEL = { product: "product", variant: "variant", zone: "zone" };
+  state.map = { product: {}, variant: {}, zone: {} };
+  state.suggested = { product: false, variant: false, zone: false };
+
+  function normKey(s) { return String(s).toLowerCase().replace(/[^a-z0-9]/g, ""); }
+
+  function recordsFor(scope) {
+    if (scope === "product") return state.products;
+    if (scope === "variant") {
+      return state.products.reduce(function (acc, p) {
+        return acc.concat(Array.isArray(p.variants) ? p.variants.filter(isObj) : []);
+      }, []);
+    }
+    return (state.rowResults.zones && state.rowResults.zones.records) || [];
+  }
+
+  function fieldNames(scope) {
+    var keys = {};
+    recordsFor(scope).forEach(function (r) { if (isObj(r)) Object.keys(r).forEach(function (k) { keys[k] = true; }); });
+    return Object.keys(keys).sort();
+  }
+
+  function getMapped(scope, key) {
+    return (state.map[scope] && state.map[scope][key]) || { primary: "", fallback: "" };
+  }
+
+  function pick(rec, scope, key) {
+    if (!isObj(rec)) return undefined;
+    var m = getMapped(scope, key);
+    var v = m.primary ? rec[m.primary] : undefined;
+    if ((v === undefined || v === null || v === "") && m.fallback) v = rec[m.fallback];
+    if (Array.isArray(v) && (key === "image")) {
+      var first = v[0];
+      return isObj(first) ? (first.src || first.url || first.image || null) : first;
+    }
+    return v;
+  }
+
+  function suggestScope(scope) {
+    var names = fieldNames(scope);
+    var byNorm = {};
+    names.forEach(function (n) { byNorm[normKey(n)] = n; });
+    state.map[scope] = {};
+    MAP_DEFS[scope].forEach(function (d) {
+      var primary = "", fallback = "";
+      d.syn.forEach(function (s) { if (!primary && byNorm[s]) primary = byNorm[s]; });
+      (d.fallbackSyn || []).forEach(function (s) { if (!fallback && byNorm[s] && byNorm[s] !== primary) fallback = byNorm[s]; });
+      state.map[scope][d.key] = { primary: primary, fallback: fallback };
+    });
+    state.suggested[scope] = true;
+  }
+
+  function toMoney(v) {
+    if (typeof v === "number") return v.toFixed(2);
+    if (typeof v === "string") {
+      if (MONEY.test(v)) return v;
+      var digits = v.replace(/[^\d.]/g, "");
+      if (MONEY.test(digits)) return digits;
+    }
+    return v === undefined ? null : v;
+  }
+
+  function toNum(v) {
+    if (typeof v === "number") return v;
+    if (typeof v === "string" && /^-?\d+(\.\d+)?$/.test(v.trim())) return Number(v);
+    return null;
+  }
+
+  function mapVariant(v) {
+    return {
+      id: pick(v, "variant", "vid"),
+      title: pick(v, "variant", "vtitle"),
+      price: toMoney(pick(v, "variant", "vprice")),
+      compare_at_price: toMoney(pick(v, "variant", "vcompare")),
+      stock: toNum(pick(v, "variant", "vstock")),
+      sku: pick(v, "variant", "vsku"),
+      inventory_item_id: pick(v, "variant", "vinv")
+    };
+  }
+
+  function mapProduct(p) {
+    var variantsRaw = pick(p, "product", "variants");
+    var variants = Array.isArray(variantsRaw) ? variantsRaw.filter(isObj).map(mapVariant) : [];
+    var stock = toNum(pick(p, "product", "stock"));
+    if (stock === null && variants.length) {
+      var sum = 0, any = false;
+      variants.forEach(function (v) { if (v.stock !== null) { sum += v.stock; any = true; } });
+      if (any) stock = sum;
+    }
+    return {
+      id: pick(p, "product", "id"),
+      title: pick(p, "product", "title"),
+      price: toMoney(pick(p, "product", "price")),
+      compare_at_price: toMoney(pick(p, "product", "compare")),
+      currency: pick(p, "product", "currency"),
+      stock: stock,
+      image: pick(p, "product", "image"),
+      updated_at: pick(p, "product", "updated"),
+      vendor: pick(p, "product", "vendor"),
+      product_type: pick(p, "product", "type"),
+      variants: variants
+    };
+  }
+
+  function missingRequired(scope, mapped) {
+    return MAP_DEFS[scope].filter(function (d) {
+      if (d.level !== "required") return false;
+      var v = mapped[d.key];
+      return v === null || v === undefined || v === "";
+    }).map(function (d) { return d.label; });
+  }
+
+  function sampleOf(rec, scope, key) {
+    var v = pick(rec, scope, key);
+    if (v === undefined || v === null || v === "") return '<span class="hint">(empty)</span>';
+    return '<span class="mono">' + esc(short(Array.isArray(v) ? "(" + v.length + " items)" : v)) + "</span>";
+  }
+
+  function mapStatus(scope, d, rec) {
+    var m = getMapped(scope, d.key);
+    if (!m.primary) {
+      if (d.level === "required") return ["fail", "Not found"];
+      return ["warn", d.level === "optional" ? "Optional, not mapped" : "Not mapped"];
+    }
+    var v = pick(rec, scope, d.key);
+    if (v === undefined || v === null || v === "") return ["warn", "Empty in this record"];
+    if (d.money && typeof v === "number") return ["warn", "Number, will send as text"];
+    if (d.money && typeof v === "string" && !MONEY.test(v)) return ["warn", "Not a plain number, will clean"];
+    if (d.iso && !ISO.test(String(v))) return ["warn", "Not an ISO date"];
+    return ["pass", m.fallback ? "Matched, with fallback" : "Matched"];
+  }
+
+  var TABS = [
+    { id: "product", label: "Product" },
+    { id: "variant", label: "Variant" },
+    { id: "order", label: "Order" },
+    { id: "customer", label: "Customer" },
+    { id: "zone", label: "Delivery zone" }
+  ];
+
+  function rowBadge(scope, d, first) {
+    var m = getMapped(scope, d.key);
+    if (!m.primary && d.level === "optional") return ["skip", "Optional"];
+    if (!first) return ["skip", "No data yet"];
+    var st = mapStatus(scope, d, first);
+    if (st[0] === "pass") return ["pass", "Matched"];
+    if (st[0] === "fail") return ["fail", "Not found"];
+    return ["warn", "Check this"];
+  }
+
+  function scopeRows(scope) {
+    var first = recordsFor(scope)[0];
+    return MAP_DEFS[scope].map(function (d) { return { d: d, badge: rowBadge(scope, d, first) }; });
+  }
+
+  function countBadges(rows) {
+    var c = { pass: 0, warn: 0, fail: 0, skip: 0 };
+    rows.forEach(function (r) { c[r.badge[0]]++; });
+    return c;
+  }
+
+  function extraFields() {
+    var used = {};
+    MAP_DEFS.product.forEach(function (d) {
+      var m = getMapped("product", d.key);
+      if (m.primary) used[m.primary] = true;
+      if (m.fallback) used[m.fallback] = true;
+    });
+    return fieldNames("product").filter(function (f) { return !used[f]; }).slice(0, 8);
+  }
+
+  function optSelect(scope, key, slot, selected) {
+    var opts = fieldNames(scope);
+    return '<select data-scope="' + scope + '" data-key="' + key + '" data-slot="' + slot + '" aria-label="' + esc(slot) + ' field for ' + esc(key) + '">' +
+      '<option value="">No match</option>' +
+      opts.map(function (o) {
+        return '<option value="' + esc(o) + '"' + (o === selected ? " selected" : "") + ">" + esc(o) + "</option>";
+      }).join("") + "</select>";
+  }
+
+  function mapRowHtml(scope, r, first) {
+    var d = r.d;
+    var m = getMapped(scope, d.key);
+    var fb = d.fallbackSyn ? '<div class="hint" style="margin:6px 0 4px">else</div>' + optSelect(scope, d.key, "fallback", m.fallback) : "";
+    var check = r.badge[0] === "warn" || r.badge[0] === "fail";
+    return '<div class="mrow' + (check ? " mrow-check" : "") + '">' +
+      '<div><div class="mname">' + esc(d.label) + '</div><span class="mtag">' + esc(d.chattrn) + "</span></div>" +
+      "<div>" + optSelect(scope, d.key, "primary", m.primary) + fb + "</div>" +
+      '<div class="mono">' + sampleOf(first, scope, d.key) + "</div>" +
+      '<div><span class="badge b-' + r.badge[0] + '">' + esc(r.badge[1]) + "</span></div></div>";
+  }
+
+  function mapTableHtml(scope) {
+    var first = recordsFor(scope)[0];
+    if (!first) {
+      return '<p class="hint" style="padding:16px">No ' + SCOPE_LABEL[scope] + ' records yet. Run "Test all endpoints" on step 1 first, so the fields can be read.</p>';
+    }
+    return '<div class="mtable-scroll"><div class="mtable">' +
+      '<div class="mhead"><div>Chattrn field</div><div>Your field</div><div>Sample value</div><div>Match</div></div>' +
+      scopeRows(scope).map(function (r) { return mapRowHtml(scope, r, first); }).join("") +
+      "</div></div>";
+  }
+
+  function tabPane(scope) {
+    if (scope === "order") {
+      var o = state.rowResults.orders;
+      var msg = !o ? "Run Test all endpoints on step 1 first."
+        : o.status === "pass" ? "Orders responded. Order mapping isn't built in this tester yet."
+        : "Orders need a key that can read orders. Fix the key in Your API, then run the test again.";
+      return '<p class="hint" style="padding:16px">' + esc(msg) + "</p>";
+    }
+    if (scope === "customer") {
+      return '<p class="hint" style="padding:16px">Customer mapping isn\'t built in this tester yet.</p>';
+    }
+    var hint = scope === "product"
+      ? "Pick which prioobazar field fills each Chattrn product field. Highlighted rows need a check."
+      : scope === "variant"
+        ? "Variants come from each product's variants list. Map the price, stock and ID for each variant."
+        : "Zones come from /delivery-zone. Map the ID that goes in the zone parameter, and the zone name.";
+    return '<p class="hint" style="padding:12px 16px 0">' + esc(hint) + "</p>" + mapTableHtml(scope);
+  }
+
+  function renderMap() {
+    ["product", "variant", "zone"].forEach(function (s) {
+      if (!state.suggested[s] && recordsFor(s).length) suggestScope(s);
+    });
+    var hasData = state.products.length > 0;
+    var pc = countBadges(scopeRows("product"));
+    var vc = countBadges(scopeRows("variant"));
+    var extras = hasData ? extraFields() : [];
+    var oStatus = state.rowResults.orders ? state.rowResults.orders.status : null;
+    var counts = {
+      product: pc.warn + pc.fail,
+      variant: vc.warn + vc.fail,
+      order: oStatus === "warn" || oStatus === "fail" ? 1 : 0,
+      customer: 0,
+      zone: countBadges(scopeRows("zone")).warn
+    };
+
+    var summary = hasData
+      ? '<p class="hint">Based on ' + state.products.length + " sample product(s) from your API. Check the highlighted rows in each tab, then save. You can change any match.</p>" +
+        '<div class="badges"><span class="badge b-pass">' + pc.pass + ' matched</span><span class="badge b-warn">' + (pc.warn + pc.fail) + ' to check</span>' +
+        '<span class="badge b-skip">' + pc.skip + ' not found (optional)</span><span class="badge b-info">' + extras.length + ' extra fields</span></div>'
+      : '<p class="hint">Run "Test all endpoints" on step 1 first, so sample products can be read.</p>';
+
+    var tabs = TABS.map(function (t) {
+      var sel = state.tab === t.id;
+      var warnTag = t.id === "order" && oStatus && oStatus !== "pass"
+        ? ' <span style="color:#9937ab;font-size:12px;font-weight:400">· fix key first</span>' : "";
+      return '<button type="button" data-tab="' + t.id + '" aria-selected="' + sel + '">' + esc(t.label) +
+        (counts[t.id] ? ' <span class="count">' + counts[t.id] + "</span>" : "") + warnTag + "</button>";
+    }).join("");
+
+    var extraHtml = extras.length
+      ? extras.map(function (f) {
+          var v = null;
+          var first = state.products[0];
+          if (first && first[f] !== undefined) v = first[f];
+          return '<div class="xrow"><span class="badge b-info mono" style="text-transform:none">' + esc(f) + "</span>" +
+            '<span class="hint" style="flex:1 1 auto;min-width:0;overflow-wrap:anywhere">' + esc(v == null ? "" : short(v)) + "</span>" +
+            '<button type="button" class="toggle" data-toggle aria-pressed="false" aria-label="Show ' + esc(f) + '"></button></div>';
+        }).join("")
+      : '<p class="hint">No extra fields yet.</p>';
+
+    $("mapPanel").innerHTML =
+      '<div class="card" style="flex-direction:row;gap:14px;align-items:flex-start">' +
+        '<div class="sparkle" aria-hidden="true">✦</div>' +
+        '<div style="flex:1 1 auto;display:flex;flex-direction:column;gap:6px;min-width:0">' +
+          '<h3 style="font-size:18px;line-height:26px;font-weight:600;color:var(--fg)">AI matched your fields to Chattrn\'s</h3>' +
+          summary +
+        "</div>" +
+        '<button type="button" class="plain" id="resuggest">Suggest again</button>' +
+      "</div>" +
+      '<div class="card" style="padding:0;gap:0;overflow:hidden">' +
+        '<div class="tabs2" role="group" aria-label="Field groups">' + tabs + "</div>" +
+        tabPane(state.tab) +
+      "</div>" +
+      '<div class="card"><div><h3>Extra fields from your API</h3>' +
+        '<p class="hint" style="margin-top:4px">Not part of Chattrn\'s standard product. Keep the ones customers ask about; the AI can mention them.</p></div>' +
+        extraHtml + "</div>";
+  }
+
+  function wireMap() {
+    $("mapPanel").addEventListener("click", function (e) {
+      var t = e.target.closest ? e.target.closest("[data-tab],#resuggest,[data-toggle]") : null;
+      if (!t) return;
+      if (t.hasAttribute("data-tab")) { state.tab = t.getAttribute("data-tab"); renderMap(); }
+      else if (t.id === "resuggest") { state.suggested = { product: false, variant: false, zone: false }; renderMap(); }
+      else if (t.hasAttribute("data-toggle")) { t.setAttribute("aria-pressed", t.getAttribute("aria-pressed") === "true" ? "false" : "true"); }
+    });
+    $("mapPanel").addEventListener("change", function (e) {
+      var s = e.target;
+      if (!s.matches || !s.matches("select[data-scope]")) return;
+      var scope = s.getAttribute("data-scope");
+      var key = s.getAttribute("data-key");
+      var slot = s.getAttribute("data-slot");
+      if (!state.map[scope][key]) state.map[scope][key] = { primary: "", fallback: "" };
+      state.map[scope][key][slot] = s.value;
+      renderMap();
+    });
+  }
+
+  // ---- Steps -------------------------------------------------------------
+  var STEP_NEXT = ["Continue: map fields with AI", "Save mapping and test connection", "Continue: delivery setup", "Finish and import products"];
+  var STEP_SUB = ["Endpoints and sign-in", "AI matches, you check", "Data and speed", "Where you deliver"];
+  function showStep(n) {
+    state.step = Math.max(1, Math.min(4, n));
+    document.querySelectorAll("[data-panel]").forEach(function (p) {
+      p.hidden = Number(p.getAttribute("data-panel")) !== state.step;
+    });
+    document.querySelectorAll(".step").forEach(function (b) {
+      var i = Number(b.getAttribute("data-step"));
+      b.classList.toggle("on", i === state.step);
+      b.classList.toggle("done", i < state.step);
+      b.querySelector(".num").textContent = i < state.step ? "✓" : String(i);
+      b.querySelector(".s").textContent = i < state.step ? "Edit" : i === state.step ? "You are here" : STEP_SUB[i - 1];
+    });
+    $("back").disabled = state.step === 1;
+    $("next").textContent = STEP_NEXT[state.step - 1];
+    if (state.step === 2) renderMap();
+    if (state.step === 3) renderTestPanel();
+  }
+
+  function setMode(m) {
+    state.mode = m;
+    state.ctxName = m === "zone" ? "zoneId" : "location_id";
+    $("ctxName").value = state.ctxName;
+    $("ctxHint").textContent = m === "zone"
+      ? "Prioobazar uses zoneId, confirmed from its ERP code (lib/storefront-scope.ts)."
+      : "Prioobazar's parameter name is not known yet. Keep location_id until the store team confirms it.";
+    $("loadZones").hidden = m !== "zone";
+    $("zoneRows").innerHTML = "";
+    $("zoneStatus").textContent = m === "zone" ? "" : "Outlet-based: enter the outlet's ID in Tester settings.";
+  }
+
+  async function loadZones() {
+    var base = $("base").value.trim().replace(/\/+$/, "");
+    $("zoneStatus").textContent = "Loading zones…";
+    $("zoneRows").innerHTML = "";
+    var res = await get(base + "/delivery-zone");
+    if (!res.ok) { $("zoneStatus").textContent = res.error; return; }
+    if (res.http !== 200 || !res.isJson) { $("zoneStatus").textContent = "HTTP " + res.http + ": could not read zones."; return; }
+    var found = extractList(res.body);
+    if (!found || !found.list.length) { $("zoneStatus").textContent = "No zones found in the response."; return; }
+    $("zoneStatus").textContent = found.list.length + " zone(s). Press Use on one to test with it.";
+    $("zoneRows").innerHTML = found.list.filter(isObj).map(function (z) {
+      var zid = pick(z, "zone", "zid");
+      var id = zid != null && zid !== "" ? zid : (z.id != null ? z.id : z.code);
+      var zname = pick(z, "zone", "zname");
+      var name = zname != null && zname !== "" ? textOf(zname) : textOf(z.name || z.title || z.zone || z.area || String(id));
+      var areas = Array.isArray(z.areas) ? z.areas.map(textOf).join(", ") : textOf(z.areas || z.area || "");
+      var fee = z.delivery_fee != null ? z.delivery_fee : z.fee;
+      var min = z.minimum_order != null ? z.minimum_order : z.min_order;
+      return "<tr><td><strong>" + esc(name) + '</strong><div class="hint mono">' + esc(String(id)) + "</div></td>" +
+        "<td>" + esc(areas || "not sent") + "</td>" +
+        '<td class="mono">' + esc(fee != null ? fee : "not sent") + "</td>" +
+        '<td class="mono">' + esc(min != null ? min : "not sent") + "</td>" +
+        '<td class="mono">' + esc(z.products_count != null ? z.products_count : "not sent") + "</td>" +
+        '<td><button type="button" class="plain use-zone" data-zid="' + esc(String(id)) + '">Use</button></td></tr>';
+    }).join("");
+  }
+
+  // Talks to the Chattrn backend on the same origin. Used for the zone parameter discovery.
+  async function backend(method, p, body) {
+    var res = await fetch(p, {
+      method: method,
+      headers: body ? { "Content-Type": "application/json" } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    var json = await res.json().catch(function () { return {}; });
+    return { http: res.status, body: json };
+  }
+
+  // The backend store is created once per set of settings. Changing the URL, sign-in or Store Type makes a new one.
+  async function ensureBackendStore() {
+    if (state.storeId) return state.storeId;
+    var mode = $("auth").value;
+    var res = await backend("POST", "/api/stores", {
+      name: $("storeName").value.trim() || "Prioobazar",
+      base_url: $("base").value.trim(),
+      website_url: $("siteUrl").value.trim(),
+      currency: "BDT",
+      delivery_mode: $("storeType").value,
+      auth: { mode: mode, header: $("header").value.trim() || "X-API-Key", key: mode === "none" ? null : $("key").value },
+    });
+    if (res.http !== 200 && res.http !== 201) {
+      throw new Error((res.body.error && res.body.error.message) || ("HTTP " + res.http));
+    }
+    state.storeId = res.body.id;
+    return state.storeId;
+  }
+
+  function resetBackendStore() { state.storeId = null; }
+
+  function init() {
+    buildRows();
+    setMode($("storeType").value);
+    showStep(1);
+    try {
+      var b = localStorage.getItem("prioTest.base");
+      if (b) $("base").value = b;
+    } catch (e) { /* storage may be blocked */ }
+  }
+
+  document.querySelectorAll(".step").forEach(function (b) {
+    b.addEventListener("click", function () { showStep(Number(b.getAttribute("data-step"))); });
+  });
+  $("back").addEventListener("click", function () { showStep(state.step - 1); });
+  function missingDetails() {
+    var m = [];
+    if (!$("siteUrl").value.trim()) m.push("Website URL");
+    if ($("brand").selectedIndex === 0) m.push("Assign brand");
+    if (!$("storeType").value) m.push("Store Type");
+    return m;
+  }
+  $("next").addEventListener("click", function () {
+    if (state.step === 1) {
+      var miss = missingDetails();
+      $("detailsErr").hidden = !miss.length;
+      $("detailsErr").textContent = miss.length ? "Fill in: " + miss.join(", ") + "." : "";
+      if (miss.length) return;
+    }
+    if (state.step < 4) { showStep(state.step + 1); return; }
+    $("finishNote").textContent = "Import isn't part of this tester yet. Nothing was saved or imported.";
+  });
+  $("storeType").addEventListener("change", function () { setMode($("storeType").value); resetBackendStore(); });
+  ["base", "auth", "header", "key", "siteUrl"].forEach(function (id) {
+    $(id).addEventListener("change", resetBackendStore);
+  });
+  $("findParam").addEventListener("click", async function () {
+    var btn = this;
+    btn.disabled = true;
+    $("zoneStatus").textContent = "Finding the zone parameter…";
+    try {
+      var id = await ensureBackendStore();
+      var res = await backend("POST", "/api/stores/" + id + "/location/discover", {});
+      if (res.http !== 200) throw new Error((res.body.error && res.body.error.message) || ("HTTP " + res.http));
+      state.ctxName = res.body.context_param;
+      $("ctxName").value = res.body.context_param;
+      $("ctxHint").textContent = res.body.message;
+      $("zoneStatus").textContent = res.body.message;
+    } catch (e) {
+      $("zoneStatus").textContent = "Could not run discovery: " + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  $("zoneRows").addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest(".use-zone") : null;
+    if (!b) return;
+    var id = b.getAttribute("data-zid");
+    $("ctxValue").value = id;
+    state.ctxValue = id;
+    $("zoneStatus").textContent = "Using " + id + " for product tests.";
+  });
+  $("ctxName").addEventListener("input", function () { state.ctxName = $("ctxName").value.trim(); });
+  $("ctxValue").addEventListener("input", function () { state.ctxValue = $("ctxValue").value.trim(); });
+  $("loadZones").addEventListener("click", loadZones);
+  $("askBtn").addEventListener("click", askOpen);
+  $("askText").addEventListener("keydown", function (e) { if (e.key === "Enter") askOpen(); });
+  wireMap();
+  $("testPanel").addEventListener("click", function (e) {
+    if (e.target.closest && e.target.closest("#runAgain")) testAll();
+  });
+  $("auth").addEventListener("change", function () {
+    var none = $("auth").value === "none";
+    $("headerBox").hidden = $("auth").value !== "key";
+    $("keyBox").hidden = none;
+  });
+  document.querySelectorAll(".runAll").forEach(function (b) { b.addEventListener("click", testAll); });
+  $("base").addEventListener("change", function () {
+    try { localStorage.setItem("prioTest.base", $("base").value.trim()); } catch (e) { /* storage may be blocked */ }
+  });
+  $("copy").addEventListener("click", function () {
+    var report = {
+      generated: new Date().toISOString(),
+      base: $("base").value.trim(),
+      endpoints: ROWS.map(function (r) {
+        var x = state.rowResults[r.id] || { status: "skip" };
+        return { id: r.id, path: r.path, status: x.status, http: x.http || null, message: x.message || "", records: x.records ? x.records.length : null };
+      }),
+      product_fields: state.products.length ? Object.keys(fieldMap(state.products)).sort() : []
+    };
+    var btn = this;
+    navigator.clipboard.writeText(JSON.stringify(report, null, 2)).then(
+      function () { btn.textContent = "Copied"; },
+      function () { btn.textContent = "Copy blocked"; });
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>
