@@ -41,7 +41,8 @@ async function imageOk(url) {
 
 function zoneContext(store, zone) {
   if (zone == null || zone === "") return null;
-  return { name: store.delivery?.context_param || "zoneId", value: String(zone) };
+  const name = store.delivery?.context_param;
+  return name ? { name, value: String(zone) } : null;
 }
 
 function pick(arr, n) {

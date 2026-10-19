@@ -4,18 +4,23 @@
 // and then the customer's zone is used to filter the tagged products.
 const E = require("./endpoints");
 const M = require("./mapping");
+const { discoverZoneParam } = require("./location");
 
 async function syncCatalog(ctx, store, { deadline = Infinity } = {}) {
   const host = new URL(store.base_url).host;
   if (!M.isSaved(store, "product")) {
     return { ok: false, message: "Save the product fields in Map fields first, so products can be read." };
   }
+  if (!store.delivery?.context_param || !store.delivery?.param_confirmed) {
+    const d = await discoverZoneParam(ctx, store, { host });
+    if (d.state !== "passed") return { ok: false, message: `The zone parameter isn't confirmed for this store. ${d.message}` };
+  }
   const z = await E.getJudged(ctx, store, "zones", {}, null, host);
   if (z.bad) return { ok: false, message: `Could not read the zone list: ${z.bad.message}` };
   const zones = M.zonesOf(store, M.extractList(z.body) || []);
   if (!zones.length) return { ok: false, message: "The zone list is empty, so there is nothing to sync." };
 
-  const param = store.delivery?.context_param || "zoneId";
+  const param = store.delivery.context_param;
   const byId = new Map();
   const perZone = [];
   for (const zone of zones) {

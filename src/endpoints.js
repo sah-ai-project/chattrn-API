@@ -90,7 +90,8 @@ const responded = (summary, res) => ({ state: "responded", summary, http: res.ht
 function defaultContext(store, context) {
   if (context) return context;
   const value = store.delivery?.zone_value ?? store.delivery?.check_zone_value;
-  return value != null && value !== "" ? { name: store.delivery?.context_param || "zoneId", value: String(value) } : null;
+  const name = store.delivery?.context_param;
+  return value != null && value !== "" && name ? { name, value: String(value) } : null;
 }
 
 // Calls one path on the store and judges the result. Returns {res, body, link, bad}.
@@ -235,13 +236,18 @@ async function evalProducts(ctx, store, values, context, host) {
 
   // Zone-less stores return 200 with an empty list. Try the first zone so the check can say so.
   if (!list.length && !defaultContext(store, context)) {
+    // The store's zone parameter is found by testing, not assumed. Find it now if it isn't known yet.
+    if (!store.delivery?.context_param) {
+      const { discoverZoneParam } = require("./location");
+      await discoverZoneParam(ctx, store, { host });
+    }
     const z = await getJudged(ctx, store, "zones", {}, null, host);
     const zones = z.bad ? [] : M.extractList(z.body) || [];
     const zoneId = zones.length ? M.zonesOf(store, zones)[0]?.id : null;
-    if (zoneId != null) {
+    if (zoneId != null && store.delivery?.context_param) {
       const withZone = await judgedPath(ctx, store, {
         path: fillPath(configOf(store, "products").path, { page: 1 }),
-        context: { name: store.delivery?.context_param || "zoneId", value: String(zoneId) },
+        context: { name: store.delivery?.context_param, value: String(zoneId) },
         label: "product list",
         host,
       });

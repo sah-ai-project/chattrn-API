@@ -82,7 +82,8 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
       currency,
       country_code: body.country_code ? String(body.country_code).toUpperCase() : null,
       status: "draft",
-      delivery: { mode, context_param: mode === "outlet" ? "location_id" : "zoneId", zone_value: null, ask_area_when: "when_needed", remember_area: false },
+      // The parameter name is unknown until discovery finds it (POST /location/discover).
+      delivery: { mode, context_param: null, param_confirmed: false, zone_value: null, ask_area_when: "when_needed", remember_area: false },
       endpoints: {
         products: { method: "GET", path: "/products?page=:page", added: true },
         detail: { method: "GET", path: "/products/:id", added: true },
@@ -249,7 +250,7 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
     const keep = prev.param_confirmed && prev.mode === mode;
     s.delivery = {
       mode,
-      context_param: keep ? prev.context_param : mode === "outlet" ? "location_id" : "zoneId",
+      context_param: keep ? prev.context_param : null,
       param_confirmed: !!keep,
       location_probe: keep ? prev.location_probe : undefined,
       zone_value,
@@ -364,7 +365,7 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
     const url = new URL(req.url, "http://localhost");
     try {
       if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/flow-tester")) {
-        return serveFile(res, path.join(publicDir, "prioobazar-flow-tester.html"), "text/html; charset=utf-8");
+        return serveFile(res, path.join(publicDir, "flow-tester.html"), "text/html; charset=utf-8");
       }
       if (!url.pathname.startsWith("/api/")) {
         res.writeHead(404, { "Content-Type": "text/plain" });

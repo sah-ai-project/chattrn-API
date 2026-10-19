@@ -188,11 +188,11 @@ test("zone filter is sent as the zone parameter", async () => {
   assert.ok(r.body.products.every((p) => p.id && p.price));
 });
 
-test("delivery settings: outlet mode uses location_id", async () => {
+test("delivery settings: no parameter name is assumed; discovery sets it", async () => {
   let r = await api("PUT", `/api/stores/${storeId}/delivery-settings`, { mode: "outlet", remember_area: true });
-  assert.equal(r.body.context_param, "location_id");
+  assert.equal(r.body.context_param, null);
   r = await api("PUT", `/api/stores/${storeId}/delivery-settings`, { mode: "zone" });
-  assert.equal(r.body.context_param, "zoneId");
+  assert.equal(r.body.context_param, null);
   r = await api("PUT", `/api/stores/${storeId}/delivery-settings`, { mode: "shipping" });
   assert.equal(r.status, 422);
 });
@@ -241,5 +241,5 @@ test("Store Type is required: a store without zone or outlet is refused", async 
   assert.equal(r.body.error.code, "delivery_mode_required");
   const o = await api("POST", "/api/stores", { delivery_mode: "outlet", name: "Outlet", base_url: mockBase, auth: { mode: "none" } });
   assert.equal(o.body.delivery.mode, "outlet");
-  assert.equal(o.body.delivery.context_param, "location_id");
+  assert.equal(o.body.delivery.context_param, null);
 });

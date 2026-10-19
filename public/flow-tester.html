@@ -268,11 +268,11 @@ details summary { margin-top: 4px; }
             </div>
           </div>
           <div class="row2">
-            <div class="field"><label for="storeName">Store name</label><input type="text" id="storeName" placeholder="e.g. Prioobazar" autocomplete="off"></div>
-            <div class="field"><label for="siteUrl">Website URL <span style="color:var(--fail)">*</span></label><input type="text" id="siteUrl" value="https://erp.prioobazar.com" autocomplete="off"></div>
+            <div class="field"><label for="storeName">Store name</label><input type="text" id="storeName" placeholder="e.g. My store" autocomplete="off"></div>
+            <div class="field"><label for="siteUrl">Website URL <span style="color:var(--fail)">*</span></label><input type="text" id="siteUrl" placeholder="https://your-store.com" autocomplete="off"></div>
           </div>
           <div class="row2">
-            <div class="field"><label for="brand">Assign brand <span style="color:var(--fail)">*</span></label><select id="brand"><option>Select a brand</option><option>Prioobazar</option></select></div>
+            <div class="field"><label for="brand">Assign brand <span style="color:var(--fail)">*</span></label><select id="brand"><option>Select a brand</option><option>Your brand</option></select></div>
             <div class="field"><label for="storeType">Store Type <span style="color:var(--fail)">*</span></label>
               <select id="storeType" aria-label="Store Type">
                 <option value="zone" selected>Zone-based</option>
@@ -291,7 +291,7 @@ details summary { margin-top: 4px; }
             </div>
           </div>
           <div class="row2">
-            <div class="field"><label for="base">Base URL</label><input type="text" id="base" value="https://erp.prioobazar.com/api/shop" autocomplete="off"><span class="hint">Local: http://localhost:3456/api/shop</span></div>
+            <div class="field"><label for="base">Base URL</label><input type="text" id="base" placeholder="https://your-store.com/api/shop" autocomplete="off"><span class="hint">Local: http://localhost:3456/api/shop</span></div>
             <div class="field">
               <label for="auth">Sign-in method</label>
               <select id="auth">
@@ -388,7 +388,7 @@ details summary { margin-top: 4px; }
           <details>
             <summary>Tester settings (not in the design)</summary>
             <div class="row2" style="margin-top:12px">
-              <div class="field"><label for="ctxName">Send as query parameter</label><input type="text" id="ctxName" value="zoneId" autocomplete="off"><span class="hint" id="ctxHint"></span></div>
+              <div class="field"><label for="ctxName">Send as query parameter</label><input type="text" id="ctxName" placeholder="Found by Find zone parameter" autocomplete="off"><span class="hint" id="ctxHint"></span></div>
               <div class="field"><label for="ctxValue">Area or outlet value</label><input type="text" id="ctxValue" placeholder="Pick a zone below, or type an ID" autocomplete="off"></div>
             </div>
           </details>
@@ -422,7 +422,7 @@ details summary { margin-top: 4px; }
   var MONEY = /^\d+(\.\d+)?$/;
   var ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
   var LISTKEYS = ["products", "data", "items", "results", "categories", "zones", "delivery_zones", "payment_methods", "methods", "orders", "banners"];
-  var state = { products: [], pageCount: 0, rowResults: {}, mode: "zone", ctxName: "zoneId", ctxValue: "", step: 1, tab: "product" };
+  var state = { products: [], pageCount: 0, rowResults: {}, mode: "zone", ctxName: "", ctxValue: "", step: 1, tab: "product" };
 
   var ROWS = [
     { id: "products", group: "Required", name: "Product list", purpose: "Product sync", method: "GET", path: "/products?page=:page", kind: "list", required: true, context: true, params: { page: "1" } },
@@ -1081,7 +1081,7 @@ details summary { margin-top: 4px; }
       return;
     }
     var zone = resolveZone($("askZone").value.trim() || zoneFromQuestion(q) || state.ctxValue);
-    var zName = $("ctxName").value.trim() || "zoneId";
+    var zName = $("ctxName").value.trim();
     var words = questionWords(q);
     var scored = state.products.map(function (p) {
       var h = haystack(p);
@@ -1361,7 +1361,7 @@ details summary { margin-top: 4px; }
       return '<p class="hint" style="padding:16px">Customer mapping isn\'t built in this tester yet.</p>';
     }
     var hint = scope === "product"
-      ? "Pick which prioobazar field fills each Chattrn product field. Highlighted rows need a check."
+      ? "Pick which store field fills each Chattrn product field. Highlighted rows need a check."
       : scope === "variant"
         ? "Variants come from each product's variants list. Map the price, stock and ID for each variant."
         : "Zones come from /delivery-zone. Map the ID that goes in the zone parameter, and the zone name.";
@@ -1471,11 +1471,10 @@ details summary { margin-top: 4px; }
 
   function setMode(m) {
     state.mode = m;
-    state.ctxName = m === "zone" ? "zoneId" : "location_id";
-    $("ctxName").value = state.ctxName;
-    $("ctxHint").textContent = m === "zone"
-      ? "Prioobazar uses zoneId, confirmed from its ERP code (lib/storefront-scope.ts)."
-      : "Prioobazar's parameter name is not known yet. Keep location_id until the store team confirms it.";
+    $("ctxName").value = state.ctxName || "";
+    $("ctxHint").textContent = state.ctxName
+      ? "Found for this store. Zone and outlet calls send it."
+      : "Not known yet. Press Find zone parameter to detect the name this store uses.";
     $("loadZones").hidden = m !== "zone";
     $("zoneRows").innerHTML = "";
     $("zoneStatus").textContent = m === "zone" ? "" : "Outlet-based: enter the outlet's ID in Tester settings.";
@@ -1524,7 +1523,7 @@ details summary { margin-top: 4px; }
     if (state.storeId) return state.storeId;
     var mode = $("auth").value;
     var res = await backend("POST", "/api/stores", {
-      name: $("storeName").value.trim() || "Prioobazar",
+      name: $("storeName").value.trim() || "Store",
       base_url: $("base").value.trim(),
       website_url: $("siteUrl").value.trim(),
       currency: "BDT",

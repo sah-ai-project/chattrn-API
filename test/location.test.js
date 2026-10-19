@@ -74,7 +74,7 @@ test("discovery reports when no candidate name works, and keeps the current name
     assert.equal(r.body.state, "needs_attention");
     assert.match(r.body.message, /No zone parameter found/);
     assert.equal(r.body.param_confirmed, false);
-    assert.equal(r.body.context_param, "zoneId");
+    assert.equal(r.body.context_param, null);
   } finally { s.close(); }
 });
 
@@ -87,7 +87,7 @@ test("a confirmed name survives a save that keeps the mode, and resets when the 
     assert.equal(kept.body.context_param, "zone_id");
     assert.equal(kept.body.param_confirmed, true);
     const changed = await s.api("PUT", `/api/stores/${id}/delivery-settings`, { mode: "outlet", ask_area_when: "when_needed" });
-    assert.equal(changed.body.context_param, "location_id");
+    assert.equal(changed.body.context_param, null);
     assert.equal(changed.body.param_confirmed, false);
   } finally { s.close(); }
 });

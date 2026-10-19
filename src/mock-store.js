@@ -1,11 +1,11 @@
 "use strict";
-// A local stand-in for a store's own API, with prioobazar-style field names (sellPrice, comparePrice,
+// A local stand-in for a store's own API, with sample field names (sellPrice, comparePrice,
 // totalStock, inStock, zoneId). Use it to test the flow without the real store.
 //   node src/mock-store.js          -> http://127.0.0.1:3101/api/shop
 // Key: every call except images needs the header X-API-Key: mock-key-1234567890
 //
 // Options (tests use these):
-//   zoneRequired: true   products return 200 with an empty list unless zoneId is sent (prioobazar-style)
+//   zoneRequired: true   products return 200 with an empty list unless the zone parameter is sent
 //   paging: "page" | "link" | "cursor" | "offset"   how the product list pages
 //   zoneParam: "zoneId" (default) | any name   the query parameter that filters products by zone
 const http = require("node:http");
