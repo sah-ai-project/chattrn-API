@@ -736,7 +736,7 @@ details summary { margin-top: 4px; }
   // The catalog covers every zone, so the product sample only needs one zone to read from.
   // If none is chosen, the first zone from the store's list is used for the sample.
   async function ensureSampleZone() {
-    if (state.ctxValue) return;
+    if (state.ctxValue || !state.ctxName) return;
     var base = $("base").value.trim().replace(/\/+$/, "");
     var res = await get(base + "/delivery-zone");
     if (!res.ok || res.http !== 200 || !res.isJson) return;
@@ -753,6 +753,8 @@ details summary { margin-top: 4px; }
 
   async function testAll() {
     setRunning(true);
+    // The zone parameter name comes from discovery for this store; it isn't assumed.
+    if (!state.ctxName) await findZoneParam();
     await ensureSampleZone();
     state.rowResults = {};
     state.products = [];
@@ -1574,23 +1576,28 @@ details summary { margin-top: 4px; }
   ["base", "auth", "header", "key", "siteUrl"].forEach(function (id) {
     $(id).addEventListener("change", resetBackendStore);
   });
-  $("findParam").addEventListener("click", async function () {
-    var btn = this;
-    btn.disabled = true;
+  // Asks the backend which parameter name this store reads its zone from, and fills it in.
+  async function findZoneParam() {
     $("zoneStatus").textContent = "Finding the zone parameter…";
     try {
       var id = await ensureBackendStore();
       var res = await backend("POST", "/api/stores/" + id + "/location/discover", {});
       if (res.http !== 200) throw new Error((res.body.error && res.body.error.message) || ("HTTP " + res.http));
-      state.ctxName = res.body.context_param;
-      $("ctxName").value = res.body.context_param;
+      state.ctxName = res.body.context_param || "";
+      $("ctxName").value = state.ctxName;
       $("ctxHint").textContent = res.body.message;
       $("zoneStatus").textContent = res.body.message;
+      return !!state.ctxName;
     } catch (e) {
       $("zoneStatus").textContent = "Could not run discovery: " + e.message;
-    } finally {
-      btn.disabled = false;
+      return false;
     }
+  }
+  $("findParam").addEventListener("click", async function () {
+    var btn = this;
+    btn.disabled = true;
+    await findZoneParam();
+    btn.disabled = false;
   });
   $("zoneRows").addEventListener("click", function (e) {
     var b = e.target.closest ? e.target.closest(".use-zone") : null;
