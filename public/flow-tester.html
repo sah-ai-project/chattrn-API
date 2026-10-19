@@ -229,6 +229,25 @@ details summary { margin-top: 4px; }
 .store-menu button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: 6px; font: 400 13px/20px Inter, sans-serif; color: var(--fg-strong); cursor: pointer; }
 .store-menu button:hover { background: var(--field); }
 @media (max-width: 640px) { .btn-connect { width: 100%; } .search-field { width: 100%; } }
+/* ---- Store overview (Figma 34078:29294) ---- */
+.store-link { background: none; border: 0; padding: 0; color: var(--fg-strong); font: 500 13px/20px Inter, sans-serif; cursor: pointer; text-align: left; }
+.store-link:hover { color: var(--brand); text-decoration: underline; }
+.detail-layout { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; align-items: start; }
+.subnav { display: flex; flex-direction: column; gap: 4px; }
+.subnav-item { display: flex; align-items: center; min-height: 36px; padding: 8px; border-radius: 10px; font-size: 13px; line-height: 20px; color: var(--muted); }
+.subnav-item.on { background: var(--bg); color: var(--fg-strong); font-weight: 600; }
+.detail-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.card-title { font-size: 16px; line-height: 24px; font-weight: 600; color: var(--fg); }
+.kv { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 8px 0; font-size: 13px; line-height: 20px; border-bottom: 1px solid var(--line2); }
+.kv:last-of-type { border-bottom: 0; }
+.kv-l { color: var(--muted); flex: 0 0 auto; }
+.kv-v { font-weight: 500; color: var(--fg); text-align: right; overflow-wrap: anywhere; min-width: 0; }
+.kv-v a { color: var(--brand); text-decoration: none; }
+.kv-v a:hover { text-decoration: underline; }
+.detail-actions { display: flex; gap: 8px; padding-top: 8px; flex-wrap: wrap; }
+.btn-grey { background: var(--chip-bg); color: var(--fg); border: 0; border-radius: 8px; height: 28px; padding: 0 10px; font: 500 13px/16px Inter, sans-serif; cursor: pointer; }
+.btn-red { background: var(--fail); color: #fff; border: 0; border-radius: 8px; height: 28px; padding: 0 10px; font: 500 13px/16px Inter, sans-serif; cursor: pointer; }
+@media (max-width: 640px) { .detail-layout { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -289,6 +308,20 @@ details summary { margin-top: 4px; }
           </table>
         </div>
         <div id="storeMenu" class="store-menu" hidden><button type="button" id="copyStoreId">Copy store ID</button></div>
+      </section>
+      <section id="detailView" hidden style="display:flex;flex-direction:column;gap:20px">
+        <div><button type="button" class="plain" id="backFromDetail" style="color:var(--brand)">&larr; Connected stores</button></div>
+        <div class="detail-layout">
+          <nav class="subnav" aria-label="Store sections">
+            <span class="subnav-item on" aria-current="page">Overview</span>
+            <span class="subnav-item">Skills</span>
+            <span class="subnav-item">Knowledge</span>
+            <span class="subnav-item">Actions</span>
+            <span class="subnav-item">Product</span>
+            <span class="subnav-item">Connection</span>
+          </nav>
+          <div class="detail-main" id="detailBody"></div>
+        </div>
       </section>
       <div id="wizardView" hidden>
       <div style="margin-bottom:-8px"><button type="button" class="plain" id="backToList" style="color:var(--brand)">&larr; Connected stores</button></div>
@@ -1721,12 +1754,14 @@ details summary { margin-top: 4px; }
 
   function showList() {
     $("wizardView").hidden = true;
+    $("detailView").hidden = true;
     $("listView").hidden = false;
     closeStoreMenu();
     loadStores();
   }
   function showWizard() {
     $("listView").hidden = true;
+    $("detailView").hidden = true;
     $("wizardView").hidden = false;
     closeStoreMenu();
     showStep(1);
@@ -1759,7 +1794,7 @@ details summary { margin-top: 4px; }
     }
     $("storeRows").innerHTML = shown.map(function (s) {
       return '<tr>' +
-        '<td><span class="store-name"><span class="store-logo">' + GLOBE + '</span>' + esc(s.name) + '</span></td>' +
+        '<td><span class="store-name"><span class="store-logo">' + GLOBE + '</span><button type="button" class="store-link" data-open="' + esc(s.id) + '">' + esc(s.name) + '</button></span></td>' +
         '<td>' + esc(String(s.website_url || "—").replace(/^https?:\/\//, "").replace(/\/$/, "")) + '</td>' +
         '<td>' + esc(s.brand || "—") + '</td>' +
         '<td><span class="badge b-pass">Connected</span></td>' +
@@ -1783,6 +1818,8 @@ details summary { margin-top: 4px; }
     btn.setAttribute("aria-expanded", "true");
   }
   $("storeRows").addEventListener("click", function (e) {
+    var l = e.target.closest ? e.target.closest(".store-link") : null;
+    if (l) { showDetail(l.getAttribute("data-open")); return; }
     var b = e.target.closest ? e.target.closest(".icon-btn") : null;
     if (!b) return;
     if (storeMenuFor === b.getAttribute("data-store") && !$("storeMenu").hidden) closeStoreMenu();
@@ -1821,6 +1858,104 @@ details summary { margin-top: 4px; }
       $("finishNote").textContent = "Not connected yet: " + e.message;
     } finally {
       btn.disabled = false;
+    }
+  }
+
+
+  // ---- Store overview (opened from the list). Edit connection reopens the wizard with this store. ----
+  var detailStore = null;
+  function hostOf(u) { return String(u || "").replace(/^https?:\/\//, "").replace(/\/$/, ""); }
+  function kv(label, valueHtml) {
+    return '<div class="kv"><span class="kv-l">' + esc(label) + '</span><span class="kv-v">' + valueHtml + '</span></div>';
+  }
+  function showDetail(id) {
+    $("listView").hidden = true;
+    $("wizardView").hidden = true;
+    $("detailView").hidden = false;
+    closeStoreMenu();
+    $("detailBody").innerHTML = '<p class="hint">Loading…</p>';
+    loadDetail(id);
+  }
+  async function loadDetail(id) {
+    var res;
+    try { res = await backend("GET", "/api/stores/" + encodeURIComponent(id)); } catch (e) { res = { http: 0, body: {} }; }
+    if (res.http !== 200) {
+      $("detailBody").innerHTML = '<p class="hint" style="color:var(--fail)">Could not load this store.</p>';
+      return;
+    }
+    renderDetail(res.body);
+  }
+  function renderDetail(s) {
+    detailStore = s;
+    var site = /^https?:\/\//.test(s.website_url || "")
+      ? '<a href="' + esc(s.website_url) + '" target="_blank" rel="noopener">' + esc(hostOf(s.website_url)) + '</a>'
+      : esc(s.website_url || "—");
+    var delivery = s.delivery && s.delivery.mode === "outlet" ? "Outlet-based" : "Zone-based";
+    var status = s.status === "connected"
+      ? '<span class="badge b-pass">Connected</span>'
+      : s.status === "disconnected"
+        ? '<span class="badge b-skip">Disconnected</span>'
+        : '<span class="badge b-warn">Not connected</span>';
+    var synced = s.catalog && s.catalog.synced_at ? new Date(s.catalog.synced_at).toLocaleString() : "Never";
+    var products = s.catalog && Array.isArray(s.catalog.products) ? String(s.catalog.products.length) : "—";
+    var zones = s.catalog && s.catalog.zones_checked ? String(s.catalog.zones_checked) : "—";
+    $("detailBody").innerHTML =
+      '<div class="card"><h3 class="card-title">Store</h3>' +
+        kv("Website", site) +
+        kv("Connection", "Map my existing API") +
+        kv("API base URL", esc(hostOf(s.base_url) || "—")) +
+        kv("Brand", esc(s.brand || "—")) +
+        kv("Delivery", delivery) +
+        kv("Status", status) +
+        '<div class="detail-actions">' +
+          '<button type="button" class="btn-grey" data-act="edit">Edit connection</button>' +
+          (s.status === "connected" ? '<button type="button" class="btn-red" data-act="disconnect">Disconnect</button>' : "") +
+        '</div>' +
+        '<p class="hint" id="detailNote"></p>' +
+      '</div>' +
+      '<div class="card"><h3 class="card-title">Sync health</h3>' +
+        kv("Product sync", "Not scheduled yet") +
+        kv("Last sync", esc(synced)) +
+        kv("Products in catalog", products) +
+        kv("Zones checked", zones) +
+        kv("Full catalog check", "Not scheduled yet") +
+        kv("Failed syncs", "Not tracked yet") +
+      '</div>';
+  }
+  // Reopens the wizard filled with this store. The sign-in key is not shown, so keep it unless you type a new one.
+  function prefillWizard(s) {
+    resetBackendStore();
+    $("storeName").value = s.name || "";
+    $("siteUrl").value = s.website_url || "";
+    $("base").value = s.base_url || "";
+    var brand = $("brand");
+    if (s.brand && !Array.from(brand.options).some(function (o) { return o.value === s.brand; })) brand.add(new Option(s.brand, s.brand));
+    brand.value = s.brand || brand.options[0].value;
+    $("storeType").value = s.delivery && s.delivery.mode === "outlet" ? "outlet" : "zone";
+    if (s.auth && s.auth.mode) $("auth").value = s.auth.mode;
+    if (s.auth && s.auth.header) $("header").value = s.auth.header;
+    $("auth").dispatchEvent(new Event("change"));
+    setMode($("storeType").value);
+    state.storeId = s.id;
+  }
+  $("detailBody").addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest("[data-act]") : null;
+    if (!b || !detailStore) return;
+    if (b.getAttribute("data-act") === "edit") { prefillWizard(detailStore); showWizard(); }
+    if (b.getAttribute("data-act") === "disconnect") disconnectStore();
+  });
+  $("backFromDetail").addEventListener("click", showList);
+  async function disconnectStore() {
+    var s = detailStore;
+    if (!s || !window.confirm("Disconnect " + s.name + "? It will leave the connected list.")) return;
+    try {
+      var res = await backend("POST", "/api/stores/" + encodeURIComponent(s.id) + "/disconnect", {});
+      if (res.http !== 200) throw new Error((res.body.error && res.body.error.message) || ("HTTP " + res.http));
+      showList();
+      setBanner(s.name + " is disconnected.");
+    } catch (e) {
+      var note = $("detailNote");
+      if (note) note.textContent = "Could not disconnect: " + e.message;
     }
   }
 

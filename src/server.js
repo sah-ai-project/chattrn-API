@@ -119,6 +119,14 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
     return { body: publicView(s) };
   });
 
+  // Disconnect keeps the store and its saved sign-in, but it leaves the connected list.
+  route("POST", "/api/stores/:id/disconnect", ({ params }) => {
+    const s = findStore(params.id);
+    s.status = "disconnected";
+    db.put(s);
+    return { body: publicView(s) };
+  });
+
   route("POST", "/api/stores/:id/connection/check", async ({ params }) => {
     const s = findStore(params.id);
     const r = await E.getJudged(ctx, s, "products", { page: "1" }, null);
