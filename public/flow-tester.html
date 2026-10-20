@@ -1551,6 +1551,8 @@ details summary { margin-top: 4px; }
       if (!state.map[scope][key]) state.map[scope][key] = { primary: "", fallback: "" };
       state.map[scope][key][slot] = s.value;
       renderMap();
+      // The Product data table reads the same mapping, so it updates with each change.
+      renderProducts();
     });
   }
 
@@ -1571,6 +1573,7 @@ details summary { margin-top: 4px; }
     });
     $("back").disabled = state.step === 1;
     $("next").textContent = STEP_NEXT[state.step - 1];
+    if (state.step === 1) renderProducts();
     if (state.step === 2) renderMap();
     if (state.step === 3) renderTestPanel();
   }
