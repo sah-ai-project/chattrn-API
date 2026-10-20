@@ -208,6 +208,9 @@ details summary { margin-top: 4px; }
   .card { padding: 16px; }
   .page-title { font-size: 20px; line-height: 30px; }
 }
+/* ---- Wizard spacing (Figma 33803:202996): 20px between stepper, store details, your API and endpoints ---- */
+[hidden] { display: none !important; }
+.wizard-view { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 /* ---- Connected stores (list view, Figma 34075:28023) ---- */
 .connect-card { flex-direction: row; align-items: center; gap: 12px; padding: 16px 20px; flex-wrap: wrap; }
 .connect-tile { width: 48px; height: 48px; border-radius: 12px; background: var(--line2); display: grid; place-items: center; flex: none; color: var(--fg); }
@@ -326,7 +329,7 @@ details summary { margin-top: 4px; }
           <div class="detail-main" id="detailBody"></div>
         </div>
       </section>
-      <div id="wizardView" hidden>
+      <div id="wizardView" class="wizard-view" hidden>
       <header>
         <h1 class="page-title">Connect a custom website</h1>
         <p class="page-sub">Connect your own ecommerce website through its API. Products, stock and orders then work in Skills, Actions, the AI Agent, the widget and the inbox, just like a Shopify store. Nothing is saved, and only GET requests are sent.</p>
