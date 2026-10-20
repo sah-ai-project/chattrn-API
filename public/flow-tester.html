@@ -44,6 +44,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 .topbar { display: flex; align-items: center; gap: 8px; height: 50px; padding: 11px 18px; border-bottom: 1px solid var(--line); font-size: 13px; }
 .topbar .crumb { color: var(--fg); }
 .topbar .crumb.dim { color: var(--muted); }
+.topbar .crumb-link { text-decoration: none; cursor: pointer; }
+.topbar .crumb-link:hover { color: var(--brand); text-decoration: underline; }
 .topbar .sep { color: var(--muted2); }
 .content { padding: 24px; display: flex; flex-direction: column; gap: 20px; max-width: 1180px; width: 100%; }
 
@@ -282,9 +284,11 @@ details summary { margin-top: 4px; }
 
   <div class="main">
     <div class="topbar">
-      <span class="crumb dim">All Integrations</span>
+      <a href="#" class="crumb dim crumb-link" id="crumbAll">All Integrations</a>
       <span class="sep">›</span>
       <span class="crumb">Custom website API</span>
+      <span class="sep" id="crumbStoreSep" hidden>›</span>
+      <span class="crumb" id="crumbStore" hidden></span>
     </div>
 
     <div class="content">
@@ -310,7 +314,6 @@ details summary { margin-top: 4px; }
         <div id="storeMenu" class="store-menu" hidden><button type="button" id="copyStoreId">Copy store ID</button></div>
       </section>
       <section id="detailView" hidden style="display:flex;flex-direction:column;gap:20px">
-        <div><button type="button" class="plain" id="backFromDetail" style="color:var(--brand)">&larr; Connected stores</button></div>
         <div class="detail-layout">
           <nav class="subnav" aria-label="Store sections">
             <span class="subnav-item on" aria-current="page">Overview</span>
@@ -324,7 +327,6 @@ details summary { margin-top: 4px; }
         </div>
       </section>
       <div id="wizardView" hidden>
-      <div style="margin-bottom:-8px"><button type="button" class="plain" id="backToList" style="color:var(--brand)">&larr; Connected stores</button></div>
       <header>
         <h1 class="page-title">Connect a custom website</h1>
         <p class="page-sub">Connect your own ecommerce website through its API. Products, stock and orders then work in Skills, Actions, the AI Agent, the widget and the inbox, just like a Shopify store. Nothing is saved, and only GET requests are sent.</p>
@@ -1752,7 +1754,13 @@ details summary { margin-top: 4px; }
   var storeList = [];
   var storeMenuFor = null;
 
+  function setCrumbStore(name) {
+    $("crumbStore").textContent = name || "";
+    $("crumbStore").hidden = !name;
+    $("crumbStoreSep").hidden = !name;
+  }
   function showList() {
+    setCrumbStore("");
     $("wizardView").hidden = true;
     $("detailView").hidden = true;
     $("listView").hidden = false;
@@ -1760,6 +1768,7 @@ details summary { margin-top: 4px; }
     loadStores();
   }
   function showWizard() {
+    setCrumbStore("");
     $("listView").hidden = true;
     $("detailView").hidden = true;
     $("wizardView").hidden = false;
@@ -1844,7 +1853,6 @@ details summary { margin-top: 4px; }
   });
   $("storeSearch").addEventListener("input", renderStores);
   $("connectBtn").addEventListener("click", function () { resetBackendStore(); setBanner(""); showWizard(); });
-  $("backToList").addEventListener("click", showList);
 
   // Finish runs the connection check again. The store joins the list only when that check passes.
   async function finishConnection() {
@@ -1895,6 +1903,7 @@ details summary { margin-top: 4px; }
   }
   function renderDetail(s) {
     detailStore = s;
+    setCrumbStore(s.name);
     var site = /^https?:\/\//.test(s.website_url || "")
       ? '<a href="' + esc(s.website_url) + '" target="_blank" rel="noopener">' + esc(hostOf(s.website_url)) + '</a>'
       : esc(s.website_url || "—");
@@ -1952,7 +1961,7 @@ details summary { margin-top: 4px; }
     if (b.getAttribute("data-act") === "edit") { prefillWizard(detailStore); showWizard(); }
     if (b.getAttribute("data-act") === "disconnect") disconnectStore();
   });
-  $("backFromDetail").addEventListener("click", showList);
+  $("crumbAll").addEventListener("click", function (e) { e.preventDefault(); showList(); });
   async function disconnectStore() {
     var s = detailStore;
     if (!s || !window.confirm("Disconnect " + s.name + "? It will leave the connected list.")) return;
