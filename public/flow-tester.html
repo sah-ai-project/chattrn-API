@@ -523,14 +523,14 @@ details summary { margin-top: 4px; }
   ];
 
   var CHECKS = [
-    { label: "Product id", paths: ["id"], need: "Required", level: "required" },
-    { label: "Title", paths: ["title", "name"], need: "Required", level: "required" },
-    { label: "Price (decimal string)", paths: ["price", "variants[].price"], need: "Required", level: "required", money: true },
-    { label: "Currency", paths: ["currency"], need: "Recommended (the store also sets one)", level: "recommended" },
-    { label: "Image", paths: ["image", "imageUrl", "images[].src", "images[]"], need: "Recommended", level: "recommended" },
+    { key: "id", label: "Product id", paths: ["id"], need: "Required", level: "required" },
+    { key: "title", label: "Title", paths: ["title", "name"], need: "Required", level: "required" },
+    { key: "price", label: "Price (decimal string)", paths: ["price", "variants[].price"], need: "Required", level: "required", money: true },
+    { key: "currency", label: "Currency", paths: ["currency"], need: "Recommended (the store also sets one)", level: "recommended" },
+    { key: "image", label: "Image", paths: ["image", "imageUrl", "images[].src", "images[]"], need: "Recommended", level: "recommended" },
     { label: "Variants", paths: ["variants[]"], need: "Required if products have options", level: "recommended" },
-    { label: "Stock", paths: ["stock", "quantity", "inventory_quantity", "variants[].stock", "variants[].inventory_quantity"], need: "Required for live stock", level: "required" },
-    { label: "Updated at (ISO date)", paths: ["updated_at"], need: "Required for sync", level: "required", iso: true }
+    { key: "stock", label: "Stock", paths: ["stock", "quantity", "inventory_quantity", "variants[].stock", "variants[].inventory_quantity"], need: "Required for live stock", level: "required" },
+    { key: "updated", label: "Updated at (ISO date)", paths: ["updated_at"], need: "Required for sync", level: "required", iso: true }
   ];
 
   function esc(s) {
@@ -994,14 +994,26 @@ details summary { margin-top: 4px; }
     $("productSummary").textContent = records.length + " product(s) read across " + (state.pageCount || 1) + " page(s).";
     var map = fieldMap(records);
     var need = CHECKS.map(function (c) {
-      var path = findPath(map, c.paths);
-      var found = path ? map[path].count : 0;
+      // Use the field picked in Map fields, so this table agrees with the test results.
+      var mk = c.key ? getMapped("product", c.key) : null;
+      var path, found, sample = "";
+      if (mk && (mk.primary || mk.fallback)) {
+        path = mk.primary || mk.fallback;
+        found = 0;
+        records.forEach(function (rec) {
+          var x = pick(rec, "product", c.key);
+          if (x !== undefined && x !== null && x !== "") { found++; if (sample === "") sample = short(x); }
+        });
+      } else {
+        path = findPath(map, c.paths);
+        found = path ? map[path].count : 0;
+        sample = path && map[path].sample !== undefined ? short(map[path].sample) : "";
+      }
       var status;
       if (!path) status = c.level === "required" ? "fail" : "warn";
       else if (found < records.length) status = "warn";
       else status = "pass";
       var cell = status === "pass" ? '<span class="ok">Every product</span>' : status === "warn" ? '<span class="part">' + (path ? found + " of " + records.length : "Not in any product") + "</span>" : '<span class="miss">Missing</span>';
-      var sample = path && map[path].sample !== undefined ? short(map[path].sample) : "";
       var moneyNote = "";
       if (c.money && path) {
         var nums = 0;
