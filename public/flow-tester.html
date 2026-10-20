@@ -1358,10 +1358,16 @@ details summary { margin-top: 4px; }
       if (d.level === "required") return ["fail", "Not found"];
       return ["warn", d.level === "optional" ? "Optional, not mapped" : "Not mapped"];
     }
-    var v = pick(rec, scope, d.key);
-    if (v === undefined || v === null || v === "") return ["warn", "Empty in this record"];
-    if (d.money && typeof v === "number") return ["warn", "Number, will send as text"];
-    if (d.money && typeof v === "string" && !MONEY.test(v)) return ["warn", "Not a plain number, will clean"];
+    // Judge the mapping by the first sample record that has a value, so one empty product does not flag a good match.
+    var v;
+    recordsFor(scope).some(function (r) {
+      var x = pick(r, scope, d.key);
+      if (x !== undefined && x !== null && x !== "") { v = x; return true; }
+      return false;
+    });
+    if (v === undefined) return ["warn", "Empty in every sample"];
+    // Numbers are fine for money: the backend sends them as text.
+    if (d.money && typeof v === "string" && !MONEY.test(v.trim())) return ["warn", "Not a plain number, will clean"];
     if (d.iso && !ISO.test(String(v))) return ["warn", "Not an ISO date"];
     return ["pass", m.fallback ? "Matched, with fallback" : "Matched"];
   }
