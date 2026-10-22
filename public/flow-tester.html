@@ -1968,7 +1968,7 @@ details summary { margin-top: 4px; }
   function init() {
     buildRows();
     setMode($("storeType").value);
-    showList();
+    showChoice();
     try {
       var b = localStorage.getItem("prioTest.base");
       if (b) $("base").value = b;
