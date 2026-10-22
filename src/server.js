@@ -15,11 +15,14 @@ const { discoverZoneParam } = require("./location");
 const { syncCatalog, catalogFor } = require("./catalog");
 const CC = require("./chattrn-connector");
 const { runChattrnTests } = require("./chattrn-test-runner");
+const { sniffFramework } = require("./framework-sniff");
+const LT = require("./laravel-token");
 
 const AUTH_MODES = ["none", "key", "bearer", "basic"];
 const DELIVERY_MODES = ["zone", "outlet"];
 const ASK_WHEN = ["always", "when_needed", "never"];
-const CONNECTION_TYPES = ["mapped_api", "chattrn_api"];
+const CONNECTION_TYPES = ["mapped_api", "chattrn_api", "laravel_package"];
+const CHATTRN_LIKE = ["chattrn_api", "laravel_package"]; // both read through the native Chattrn connector
 
 function createApp({ dataDir, publicDir, adminToken, secretKey }) {
   const db = new Db(path.join(dataDir, "stores.json"));
@@ -111,6 +114,25 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
       return { status: 201, body: publicView(store) };
     }
 
+    if (connection_type === "laravel_package") {
+      // Nothing to probe yet: the package isn't installed until the merchant runs the commands
+      // on Install package and the package calls POST /package/register. Once it does, this
+      // store gets the same chattrn.base_url / access_token_enc a native Chattrn API store has.
+      const store = {
+        ...shared,
+        currency: null,
+        country_code: null,
+        chattrn: { base_url: null, access_token_enc: null, api_version: null, capabilities: null },
+        laravel: {
+          connection_token_hash: null, token_created_at: null, token_expires_at: null, token_used_at: null,
+          package_version: null, framework_version: null, route_prefix: null, models_matched: null,
+          registered_at: null, last_seen_at: null,
+        },
+      };
+      db.put(store);
+      return { status: 201, body: publicView(store) };
+    }
+
     const base = cleanBase(body.base_url);
     await assertPublicUrl(base);
     const a = validateAuth(body.auth || {}, null);
@@ -178,7 +200,7 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
 
   const chattrnStore = (id) => {
     const s = findStore(id);
-    if (s.connection_type !== "chattrn_api") throw new HttpError(409, "wrong_connection_type", "This store isn't connected through the Chattrn API.");
+    if (!CHATTRN_LIKE.includes(s.connection_type)) throw new HttpError(409, "wrong_connection_type", "This store isn't connected through the Chattrn API.");
     return s;
   };
 
@@ -215,6 +237,125 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
     const s = chattrnStore(params.id);
     const run = (s.test_runs || [])[0];
     return { body: { checked_at: run ? run.finished_at : null, checks: run ? run.checks : [] } };
+  });
+
+  // ---- Laravel package installer (slice 3; reads through the same native Chattrn connector) ----
+
+  const laravelStore = (id) => {
+    const s = findStore(id);
+    if (s.connection_type !== "laravel_package") throw new HttpError(409, "wrong_connection_type", "This store isn't set up for the Laravel package.");
+    return s;
+  };
+
+  // One request, not the full website-check service: just enough to power "Modal: Laravel not detected".
+  route("POST", "/api/website-sniff", async ({ body }) => {
+    const url = typeof body.website_url === "string" ? body.website_url.trim() : "";
+    if (!url) throw new HttpError(400, "website_url_required", "Enter the website address first.");
+    await assertPublicUrl(url);
+    const result = await sniffFramework(url);
+    return { body: result };
+  });
+
+  // Mints a fresh one-time CHATTRN_TOKEN for the install commands. Each call replaces any
+  // still-pending token, so only the most recently shown value will register.
+  route("POST", "/api/stores/:id/laravel/connection-token", ({ params }) => {
+    const s = laravelStore(params.id);
+    const issued = LT.issueConnectionToken(s);
+    db.put(s);
+    return { body: issued };
+  });
+
+  // The package's own endpoint (devspec.txt: "The package's register endpoint: POST /package/register").
+  // On first boot the package sends the token, site URL, route prefix and versions; Chattrn
+  // returns the access key it will send as X-Chattrn-Access-Token from then on.
+  route("POST", "/package/register", async ({ body }) => {
+    const token = typeof body.token === "string" ? body.token.trim() : "";
+    if (!token) throw new HttpError(400, "token_required", "Missing connection token.");
+    const s = db.findByLaravelTokenHash(LT.hashToken(token));
+    if (!s) throw new HttpError(401, "token_invalid", "Token rejected.");
+    const check = LT.verifyConnectionToken(s, token);
+    if (!check.ok) throw new HttpError(check.reason === "token_expired" ? 410 : 401, check.reason, check.message);
+
+    const siteUrl = typeof body.site_url === "string" ? body.site_url.trim().replace(/\/+$/, "") : "";
+    const routePrefix = typeof body.route_prefix === "string" && body.route_prefix.trim() ? body.route_prefix.trim().replace(/^\/?/, "/").replace(/\/+$/, "") : "/chattrn/v1";
+    if (!siteUrl) throw new HttpError(400, "site_url_required", "Missing site_url.");
+    await assertPublicUrl(siteUrl);
+
+    const accessKey = LT.newToken();
+    const now = new Date().toISOString();
+    s.laravel.token_used_at = now;
+    s.laravel.package_version = body.package_version ? String(body.package_version).slice(0, 40) : s.laravel.package_version;
+    s.laravel.framework_version = body.framework_version ? String(body.framework_version).slice(0, 40) : s.laravel.framework_version;
+    s.laravel.route_prefix = routePrefix;
+    if (body.models_matched && typeof body.models_matched === "object") {
+      s.laravel.models_matched = {
+        product: !!body.models_matched.product, variant: !!body.models_matched.variant,
+        order: !!body.models_matched.order, customer: !!body.models_matched.customer,
+      };
+    }
+    s.laravel.registered_at = s.laravel.registered_at || now;
+    s.laravel.last_seen_at = now;
+    s.chattrn.base_url = siteUrl + routePrefix;
+    s.chattrn.access_token_enc = encrypt(accessKey, ctx.secretKey);
+    db.put(s);
+    return { body: { access_token: accessKey, store_id: s.id } };
+  });
+
+  // Rotates the access key the package uses. Spec: "Regenerating the token revokes the old
+  // access key" - immediate, not gated behind a live check since the package hasn't seen the
+  // new value yet. The new key is shown once; after that only its last 4 characters are kept.
+  route("POST", "/api/stores/:id/laravel/regenerate-token", ({ params }) => {
+    const s = laravelStore(params.id);
+    if (!s.laravel.registered_at) throw new HttpError(409, "not_registered", "The package hasn't registered yet, so there's no token to regenerate.");
+    const accessKey = LT.newToken();
+    s.chattrn.access_token_enc = encrypt(accessKey, ctx.secretKey);
+    db.put(s);
+    return { body: { access_token: accessKey } };
+  });
+
+  // Install status (devspec.txt): Package installed, Store linked with your token, Chattrn API
+  // reachable, Tables matched, First product sync. Polled by the wizard's "Waiting for your
+  // store to finish connecting" card and mirrored on the Connection (Laravel package) tab.
+  route("GET", "/api/stores/:id/laravel/install-status", async ({ params }) => {
+    const s = laravelStore(params.id);
+    const l = s.laravel;
+    const checks = [];
+    const registered = !!l.registered_at;
+    checks.push({
+      key: "package_installed", label: "Package installed",
+      state: registered ? "pass" : "pending",
+      message: registered ? "chattrn/connector found on your server" : "Waiting for the package to register.",
+    });
+    checks.push({
+      key: "store_linked", label: "Store linked with your token",
+      state: registered ? "pass" : "pending",
+      message: registered ? `${(s.website_url || "Your store").replace(/^https?:\/\//, "")} is now linked to this workspace` : "Paste the token into .env, then run the installer.",
+    });
+    let reach = { state: "pending", message: "Waiting for the package to register." };
+    if (registered && s.chattrn.base_url) {
+      const r = await CC.checkStore(ctx, s, { websiteUrl: s.website_url });
+      reach = r.state === "connected"
+        ? { state: "pass", message: `${s.chattrn.base_url}/store.json answered` }
+        : { state: "warn", message: r.message || "Not reachable yet." };
+    }
+    checks.push({ key: "api_reachable", label: "Chattrn API reachable", ...reach });
+    const models = l.models_matched;
+    const required = ["product", "variant", "order", "customer"];
+    const missing = models ? required.filter((k) => !models[k]) : required;
+    checks.push({
+      key: "tables_matched", label: "Tables matched",
+      state: !registered ? "pending" : missing.length === 0 ? "pass" : "warn",
+      message: !registered ? "Run php artisan chattrn:map, then continue."
+        : missing.length === 0 ? "Product, Variant, Order and Customer all matched."
+        : `${missing.map((m) => m[0].toUpperCase() + m.slice(1)).join(", ")} not matched yet: run php artisan chattrn:map again to add ${missing.length > 1 ? "them" : "it"}.`,
+    });
+    checks.push({
+      key: "first_sync", label: "First product sync",
+      state: s.status === "connected" ? "pass" : "pending",
+      message: s.status === "connected" ? "Synced. Products sync every 15 minutes." : "Starts when you continue. After that, products sync every 15 minutes.",
+    });
+    const canContinue = checks[0].state === "pass" && checks[1].state === "pass" && checks[2].state === "pass";
+    return { body: { checks, can_continue: canContinue } };
   });
 
   // ---- endpoints ----
@@ -308,7 +449,7 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
 
   route("GET", "/api/stores/:id/zones", async ({ params }) => {
     const s = findStore(params.id);
-    if (s.connection_type === "chattrn_api") {
+    if (CHATTRN_LIKE.includes(s.connection_type)) {
       const r = await CC.listLocations(ctx, s);
       if (r.res.error || r.res.http !== 200) throw new HttpError(502, "store_error", "Could not read locations from the store.");
       const zones = r.list.map((l) => ({
@@ -389,7 +530,7 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
 
   route("POST", "/api/stores/:id/test-runs", async ({ params, body }) => {
     const s = findStore(params.id);
-    const run = s.connection_type === "chattrn_api"
+    const run = CHATTRN_LIKE.includes(s.connection_type)
       ? await runChattrnTests(ctx, s, {})
       : await runTests(ctx, s, { phone: body.phone || null, zone: body.zone ?? null, rediscover: !!body.rediscover });
     db.put(s);
@@ -472,11 +613,14 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
       if (req.method === "GET" && url.pathname === "/openapi.yaml") {
         return serveFile(res, path.join(publicDir, "openapi.yaml"), "text/yaml; charset=utf-8");
       }
-      if (!url.pathname.startsWith("/api/")) {
+      // The Laravel package's own callback (devspec.txt) isn't under /api/ - it's called by the
+      // merchant's server, not by our frontend, and never carries the admin token below.
+      const isPackageCallback = req.method === "POST" && url.pathname === "/package/register";
+      if (!url.pathname.startsWith("/api/") && !isPackageCallback) {
         res.writeHead(404, { "Content-Type": "text/plain" });
         return res.end("Not found");
       }
-      if (adminToken && req.headers["x-admin-token"] !== adminToken) {
+      if (adminToken && !isPackageCallback && req.headers["x-admin-token"] !== adminToken) {
         return sendJson(res, 401, { error: { code: "unauthorized", message: "Missing or wrong admin token." } });
       }
       for (const r of routes) {

@@ -21,6 +21,12 @@ class Db {
     return this.data.stores[id] || null;
   }
 
+  // The Laravel package's register call only has the plaintext connection token, not a store id,
+  // so it's looked up by the hash of the pending one-time token (src/laravel-token.js).
+  findByLaravelTokenHash(hash) {
+    return Object.values(this.data.stores).find((s) => s.laravel && s.laravel.connection_token_hash === hash) || null;
+  }
+
   put(store) {
     store.updated_at = new Date().toISOString();
     this.data.stores[store.id] = store;
@@ -36,10 +42,23 @@ class Db {
 }
 
 function publicView(store) {
-  const { auth, chattrn, ...rest } = store;
+  const { auth, chattrn, laravel, ...rest } = store;
   const out = { ...rest };
   if (auth) out.auth = { mode: auth.mode, header: auth.header || null, key_saved: !!auth.secret_enc };
   if (chattrn) out.chattrn = { base_url: chattrn.base_url, api_version: chattrn.api_version || null, capabilities: chattrn.capabilities || null, token_saved: !!chattrn.access_token_enc };
+  // Never expose the one-time connection-token hash, or whether one is pending, beyond what the
+  // wizard needs to decide if it should mint a fresh one.
+  if (laravel) {
+    out.laravel = {
+      package_version: laravel.package_version || null,
+      framework_version: laravel.framework_version || null,
+      route_prefix: laravel.route_prefix || null,
+      models_matched: laravel.models_matched || null,
+      registered_at: laravel.registered_at || null,
+      last_seen_at: laravel.last_seen_at || null,
+      token_pending: !!(laravel.connection_token_hash && !laravel.token_used_at && laravel.token_expires_at && laravel.token_expires_at > new Date().toISOString()),
+    };
+  }
   return out;
 }
 

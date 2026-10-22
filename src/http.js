@@ -125,6 +125,7 @@ async function request({ url, method = "GET", headers = {}, body, timeoutMs = 10
       text: text.slice(0, 2000),
       retryAfter: res.headers.get("retry-after"),
       link: res.headers.get("link"),
+      setCookie: typeof res.headers.getSetCookie === "function" ? res.headers.getSetCookie() : (res.headers.get("set-cookie") ? [res.headers.get("set-cookie")] : []),
     };
   } catch (e) {
     if (e.name === "AbortError") return { http: null, ms: elapsed(), error: "timeout" };

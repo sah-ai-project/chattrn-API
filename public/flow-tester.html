@@ -54,12 +54,12 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 .page-sub { font-size: 12px; line-height: 18px; color: var(--muted); margin-top: 6px; max-width: 700px; }
 .stepper { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .stepper.stepper-3 { grid-template-columns: repeat(3, 1fr); }
-.step, .cstep { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); cursor: pointer; text-align: left; color: inherit; font: inherit; min-width: 0; }
-.step.on, .cstep.on { border: 1.5px solid var(--brand); }
-.step .num, .cstep .num { width: 26px; height: 26px; border-radius: 13px; display: grid; place-items: center; font-weight: 600; font-size: 13px; border: 1.5px solid var(--line2); color: var(--muted); flex: none; }
-.step.on .num, .cstep.on .num { background: var(--brand); border-color: var(--brand); color: var(--brand-fg); }
-.step .t, .cstep .t { font-weight: 600; font-size: 14px; line-height: 20px; color: var(--fg); }
-.step .s, .cstep .s { font-size: 12px; line-height: 18px; color: var(--muted); }
+.step, .cstep, .lstep { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); cursor: pointer; text-align: left; color: inherit; font: inherit; min-width: 0; }
+.step.on, .cstep.on, .lstep.on { border: 1.5px solid var(--brand); }
+.step .num, .cstep .num, .lstep .num { width: 26px; height: 26px; border-radius: 13px; display: grid; place-items: center; font-weight: 600; font-size: 13px; border: 1.5px solid var(--line2); color: var(--muted); flex: none; }
+.step.on .num, .cstep.on .num, .lstep.on .num { background: var(--brand); border-color: var(--brand); color: var(--brand-fg); }
+.step .t, .cstep .t, .lstep .t { font-weight: 600; font-size: 14px; line-height: 20px; color: var(--fg); }
+.step .s, .cstep .s, .lstep .s { font-size: 12px; line-height: 18px; color: var(--muted); }
 
 /* ---- Cards ---- */
 .card { background: var(--surface); border: 1px solid var(--line2); border-radius: 10px; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
@@ -162,7 +162,7 @@ select { height: 36px; }
 .toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .15s; }
 .toggle[aria-pressed="true"] { background: var(--pass); }
 .toggle[aria-pressed="true"]::after { left: 22px; }
-.step.done .num, .cstep.done .num { background: var(--pass); border-color: var(--pass); color: #fff; }
+.step.done .num, .cstep.done .num, .lstep.done .num { background: var(--pass); border-color: var(--pass); color: #fff; }
 
 /* ---- Test connection (Figma layout) ---- */
 .banner { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 16px 24px; border-radius: 10px; border: 1px solid var(--line2); background: var(--surface); }
@@ -279,6 +279,36 @@ details summary { margin-top: 4px; }
 .conn-row .row-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; color: var(--fg-strong); }
 .conn-row .row-desc { font-size: 13px; color: var(--muted); }
 .conn-row .row-connect { flex: none; }
+/* ---- Laravel package installer (slice 3) ---- */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,41,.45); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+.modal-card { background: var(--surface); border-radius: 12px; box-shadow: 0 12px 32px rgba(15,23,41,.18); width: 100%; max-width: 520px; display: flex; flex-direction: column; }
+.modal-body { display: flex; flex-direction: column; gap: 14px; padding: 24px 24px 20px; }
+.modal-body .modal-top { display: flex; gap: 12px; align-items: flex-start; }
+.modal-icon { width: 40px; height: 40px; border-radius: 20px; background: var(--warn-bg); display: grid; place-items: center; color: var(--warn); flex: none; }
+.modal-close { background: transparent; border: 0; color: var(--muted); cursor: pointer; flex: none; padding: 0; }
+.modal-title { font-size: 18px; font-weight: 600; line-height: 26px; color: var(--fg-strong); margin: 0; }
+.modal-text { font-size: 14px; line-height: 20px; color: var(--muted); margin: 6px 0 0; }
+.modal-options { background: var(--field); border: 1px solid var(--line2); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.modal-options .opt-row { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 20px; color: var(--fg); }
+.modal-options .opt-row .dot { width: 6px; height: 6px; border-radius: 3px; background: var(--muted); margin-top: 7px; flex: none; }
+.modal-footer { border-top: 1px solid var(--line2); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+.cmd-row { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-top: 1px solid var(--line2); }
+.cmd-row:first-of-type { border-top: 0; }
+.cmd-row .num { width: 26px; height: 26px; border-radius: 13px; display: grid; place-items: center; font-weight: 600; font-size: 13px; border: 1.5px solid var(--line2); color: var(--muted); flex: none; margin-top: 2px; }
+.cmd-row .cmd-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.cmd-row .cmd-title { font-weight: 600; font-size: 14px; color: var(--fg); }
+.cmd-row .cmd-sub { font-size: 12px; color: var(--muted); }
+.cmd-line { display: flex; align-items: center; gap: 10px; background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; }
+.cmd-line code { flex: 1; min-width: 0; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--fg-strong); overflow-x: auto; white-space: nowrap; }
+.wait-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line2); }
+.wait-row:first-of-type { border-top: 0; }
+.wait-row .wicon { width: 22px; height: 22px; border-radius: 11px; display: grid; place-items: center; flex: none; margin-top: 2px; font-size: 12px; }
+.wait-row .wicon.pass { background: var(--pass-bg); color: var(--pass); }
+.wait-row .wicon.warn { background: var(--warn-bg); color: var(--warn); }
+.wait-row .wicon.pending { background: var(--skip-bg); color: var(--skip); }
+.wait-row .wbody { flex: 1; min-width: 0; }
+.wait-row .wtitle { font-weight: 600; font-size: 13px; color: var(--fg); }
+.wait-row .wsub { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .check-list { display: flex; flex-direction: column; gap: 0; }
 .check-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line2); }
 .check-row:last-child { border-bottom: 0; }
@@ -390,6 +420,16 @@ details summary { margin-top: 4px; }
             </div>
             <button type="button" class="btn-grey row-connect" id="chooseMappedApi">Connect</button>
           </div>
+          <div class="conn-row">
+            <div class="icon-tile">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 4.5v11L12 22l-9-4.5v-11z"></path><path d="M12 22V12M21 6.5L12 12L3 6.5"></path></svg>
+            </div>
+            <div class="row-body">
+              <div class="row-title">Laravel package</div>
+              <div class="row-desc">Your developer runs one install command.</div>
+            </div>
+            <button type="button" class="btn-grey row-connect" id="chooseLaravel">Connect</button>
+          </div>
         </div>
       </section>
       <section id="detailView" hidden style="display:flex;flex-direction:column;gap:20px">
@@ -478,6 +518,133 @@ details summary { margin-top: 4px; }
       </div>
       <p class="hint" id="cFinishNote" role="status" style="margin:0;min-height:18px"></p>
       </div>
+        <div id="laravelWizardView" class="wizard-view" hidden>
+      <header>
+        <h1 class="page-title">Laravel package &middot; Install package</h1>
+        <p class="page-sub">Your developer runs a few commands in the Laravel app. Once the package registers, it reads the same way a native Chattrn API store does.</p>
+      </header>
+
+      <div class="stepper stepper-3" aria-label="Setup steps">
+        <button type="button" class="lstep" data-lstep="1"><span class="num">1</span><span><span class="t" style="display:block">Install package</span><span class="s">Composer and artisan commands</span></span></button>
+        <button type="button" class="lstep" data-lstep="2"><span class="num">2</span><span><span class="t" style="display:block">Test connection</span><span class="s">Data and speed</span></span></button>
+        <button type="button" class="lstep" data-lstep="3"><span class="num">3</span><span><span class="t" style="display:block">Delivery setup</span><span class="s">Where you deliver</span></span></button>
+      </div>
+
+      <!-- STEP 1: Install package -->
+      <section data-lpanel="1" style="display:flex;flex-direction:column;gap:20px">
+        <div class="card">
+          <div class="card-head"><div><h3>Store details</h3><p>How the store appears in Chattrn and which brand's conversations it serves.</p></div></div>
+          <div class="row2">
+            <div class="field"><label for="lStoreName">Store name</label><input type="text" id="lStoreName" placeholder="e.g. My store" autocomplete="off"></div>
+            <div class="field"><label for="lSiteUrl">Website URL <span style="color:var(--fail)">*</span></label><input type="text" id="lSiteUrl" placeholder="https://your-store.com" autocomplete="off"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label for="lBrand">Assign brand <span style="color:var(--fail)">*</span></label><select id="lBrand"><option>Select a brand</option><option>Your brand</option></select></div>
+            <div class="field"><label for="lStoreType">Store Type <span style="color:var(--fail)">*</span></label>
+              <select id="lStoreType" aria-label="Store Type"><option value="zone" selected>Zone-based</option><option value="outlet">Outlet-based</option></select>
+            </div>
+          </div>
+          <p class="hint" id="lDetailsErr" style="color:var(--fail)" hidden></p>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><div><h3>Install the Chattrn package</h3><p>Have your developer run these in the Laravel app's root, in order.</p></div></div>
+          <div class="cmd-row">
+            <span class="num">1</span>
+            <div class="cmd-body">
+              <span class="cmd-title">Add the package</span>
+              <div class="cmd-line"><code>composer require chattrn/connector</code><button type="button" class="plain copy-cmd" data-copy="composer require chattrn/connector">Copy</button></div>
+            </div>
+          </div>
+          <div class="cmd-row">
+            <span class="num">2</span>
+            <div class="cmd-body">
+              <span class="cmd-title">Run the installer</span>
+              <div class="cmd-line"><code>php artisan chattrn:install</code><button type="button" class="plain copy-cmd" data-copy="php artisan chattrn:install">Copy</button></div>
+            </div>
+          </div>
+          <div class="cmd-row">
+            <span class="num">3</span>
+            <div class="cmd-body">
+              <span class="cmd-title">Connection token <span class="dim">(single-use, expires in 30 minutes)</span></span>
+              <span class="cmd-sub">Paste this as a line in the app's <code>.env</code> file. <strong>Keep it private.</strong></span>
+              <div class="cmd-line"><code id="lTokenLine">Generate a token to continue&hellip;</code><button type="button" class="plain copy-cmd" id="lCopyToken" data-copy="">Copy</button></div>
+              <div><button type="button" class="btn-grey" id="lGenToken">Generate token</button> <span class="hint" id="lTokenNote" style="margin:0"></span></div>
+            </div>
+          </div>
+          <div class="cmd-row">
+            <span class="num">4</span>
+            <div class="cmd-body">
+              <span class="cmd-title">Map the models</span>
+              <span class="cmd-sub">Asks which Eloquent models are Product, Variant, Order and Customer, then registers with Chattrn.</span>
+              <div class="cmd-line"><code>php artisan chattrn:map</code><button type="button" class="plain copy-cmd" data-copy="php artisan chattrn:map">Copy</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div><h3>Waiting for your store to finish connecting</h3><p>This updates automatically once the package registers.</p></div>
+            <button type="button" class="plain" id="lRecheck">Check again</button>
+          </div>
+          <div id="lWaitRows"><div class="wait-row"><span class="wicon pending">&middot;</span><div class="wbody"><div class="wtitle">Loading&hellip;</div></div></div></div>
+        </div>
+      </section>
+
+      <!-- STEP 2: Test connection -->
+      <section data-lpanel="2" hidden style="display:flex;flex-direction:column;gap:20px">
+        <div id="lTestPanel"></div>
+      </section>
+
+      <!-- STEP 3: Delivery setup -->
+      <section data-lpanel="3" hidden style="display:flex;flex-direction:column;gap:20px">
+        <div class="card" id="lDeliveryCard">
+          <div class="card-head">
+            <div><div class="sec-title">Delivery zones</div><p class="hint" style="margin-top:4px">Zones, areas and minimum orders come from your store and stay in sync. Edit them in your store, not here.</p></div>
+            <span class="badge b-skip">Read from GET /locations.json</span>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Zone</th><th>Areas</th><th>Minimum order</th></tr></thead>
+            <tbody id="lZoneRows"><tr><td colspan="3" class="hint">Loading zones…</td></tr></tbody>
+          </table></div>
+        </div>
+        <div class="card">
+          <div><div class="sec-title">When should the AI ask for the area?</div><p class="hint" style="margin-top:4px">Asked once per customer. It's saved on the conversation, so a human agent sees it too.</p></div>
+          <label class="opt"><input type="radio" name="lAsk" checked><span><span class="opt-title">When the customer first asks about a product <span class="badge b-pink">Recommended</span></span></span></label>
+          <label class="opt"><input type="radio" name="lAsk"><span><span class="opt-title">At the start of every new chat</span></span></label>
+          <label class="opt" style="border-top:1px solid var(--line2);padding-top:14px"><input type="checkbox" id="lRemember" checked><span class="opt-title">Remember the area for returning customers</span></label>
+        </div>
+      </section>
+
+      <div class="footer" style="border:0;padding:0;margin-top:0">
+        <button type="button" class="plain" id="lBack">Back</button>
+        <button type="button" class="primary" id="lNext">Continue: test connection</button>
+      </div>
+      <p class="hint" id="lFinishNote" role="status" style="margin:0;min-height:18px"></p>
+      </div>
+    <div id="laravelModalBackdrop" class="modal-backdrop" hidden>
+      <div class="modal-card">
+        <div class="modal-body">
+          <div class="modal-top">
+            <div class="modal-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L2.5 17a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+            </div>
+            <div>
+              <h3 style="margin:0 0 4px;font-size:15px">Laravel not detected</h3>
+              <p class="hint" id="laravelModalMsg" style="margin:0">We checked this website and didn't see signs of a Laravel app.</p>
+            </div>
+          </div>
+          <div class="modal-options">
+            <div class="opt-row"><span class="dot"></span><span>If this isn't a Laravel site, <strong>Map my existing API</strong> is usually the faster way to connect it.</span></div>
+            <div class="opt-row"><span class="dot"></span><span>If it is Laravel — behind a proxy, or not reachable from here — you can continue anyway.</span></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="plain" id="laravelModalSwitch">Use the recommended option</button>
+          <button type="button" class="primary" id="laravelModalContinue">Continue with Laravel</button>
+        </div>
+      </div>
+    </div>
     <div id="wizardView" class="wizard-view" hidden>
       <header>
         <h1 class="page-title">Connect a custom website</h1>
@@ -1938,6 +2105,7 @@ details summary { margin-top: 4px; }
     $("detailView").hidden = true;
     $("connectChoiceView").hidden = true;
     $("chattrnWizardView").hidden = true;
+    $("laravelWizardView").hidden = true;
   }
   function showList() {
     setCrumbStore("");
@@ -2041,6 +2209,7 @@ details summary { margin-top: 4px; }
   $("backFromChoice").addEventListener("click", showList);
   $("chooseMappedApi").addEventListener("click", function () { resetBackendStore(); showWizard(); });
   $("chooseChattrnApi").addEventListener("click", function () { resetChattrnStore(); showChattrnWizard(); });
+  $("chooseLaravel").addEventListener("click", function () { resetLaravelStore(); showLaravelWizard(); });
   $("siteCheckBtn").addEventListener("click", function () {
     // Website-check probing is out of scope for this build (see devspec's "Website check" tool) —
     // this just nudges toward the two supported connection paths below.
@@ -2098,6 +2267,7 @@ details summary { margin-top: 4px; }
     detailStore = s;
     setCrumbStore(s.name);
     if (s.connection_type === "chattrn_api") { renderChattrnDetail(s); return; }
+    if (s.connection_type === "laravel_package") { renderLaravelDetail(s); return; }
     var site = /^https?:\/\//.test(s.website_url || "")
       ? '<a href="' + esc(s.website_url) + '" target="_blank" rel="noopener">' + esc(hostOf(s.website_url)) + '</a>'
       : esc(s.website_url || "—");
@@ -2186,6 +2356,59 @@ details summary { margin-top: 4px; }
       ? checks.map(checkRowHtml).join("")
       : '<p class="hint">No test has been run yet. Press Run test again.</p>';
   }
+
+  // Connection (Laravel package) tab (devspec.txt screens list, "11c/11e. Laravel package: Connection").
+  function renderLaravelDetail(s) {
+    var site = /^https?:\/\//.test(s.website_url || "")
+      ? '<a href="' + esc(s.website_url) + '" target="_blank" rel="noopener">' + esc(hostOf(s.website_url)) + '</a>'
+      : esc(s.website_url || "—");
+    var delivery = s.delivery && s.delivery.mode === "outlet" ? "Outlet-based" : "Zone-based";
+    var status = s.status === "connected"
+      ? '<span class="badge b-pass">Connected</span>'
+      : s.status === "disconnected"
+        ? '<span class="badge b-skip">Disconnected</span>'
+        : '<span class="badge b-warn">Not connected</span>';
+    var laravel = s.laravel || {};
+    var registered = !!laravel.registered_at;
+    $("detailBody").innerHTML =
+      '<div class="card"><h3 class="card-title">Store</h3>' +
+        kv("Website", site) +
+        kv("Connection", "Laravel package") +
+        kv("Brand", esc(s.brand || "—")) +
+        kv("Delivery", delivery) +
+        kv("Status", status) +
+        '<div class="detail-actions">' +
+          '<button type="button" class="btn-grey" data-act="edit">Edit connection</button>' +
+          (s.status === "connected" ? '<button type="button" class="btn-red" data-act="disconnect">Disconnect</button>' : "") +
+        '</div>' +
+        '<p class="hint" id="detailNote"></p>' +
+      '</div>' +
+      '<div class="card"><h3 class="card-title">Package</h3>' +
+        kv("Connection token", registered ? "&#8226;&#8226;&#8226;&#8226; registered" : (laravel.token_pending ? "Pending — paste it into .env" : "Not generated yet")) +
+        kv("Package version", esc(laravel.package_version || "—")) +
+        kv("Laravel version", esc(laravel.framework_version || "—")) +
+        kv("Route prefix", esc(laravel.route_prefix || "—")) +
+        kv("Last seen", laravel.last_seen_at ? new Date(laravel.last_seen_at).toLocaleString() : "—") +
+        '<div class="detail-actions">' +
+          '<button type="button" class="btn-grey" data-act="regenerate-token">Regenerate token</button>' +
+          '<button type="button" class="btn-grey" data-act="edit-config">Edit config</button>' +
+          '<button type="button" class="btn-grey" data-act="run-map-again">Run chattrn:map again</button>' +
+        '</div>' +
+        '<p class="hint" id="laravelDetailNote"></p>' +
+        '<h3 style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:10px">Package &amp; tables</h3>' +
+        '<div id="laravelStatusList"><p class="hint">Loading…</p></div>' +
+      '</div>';
+    loadLaravelStatus(s.id);
+  }
+
+  async function loadLaravelStatus(id) {
+    var el = $("laravelStatusList");
+    if (!el) return;
+    var res;
+    try { res = await backend("GET", "/api/stores/" + id + "/laravel/install-status"); } catch (e) { res = { http: 0, body: {} }; }
+    var checks = res.body && res.body.checks;
+    el.innerHTML = checks && checks.length ? checks.map(checkRowHtml).join("") : '<p class="hint">Could not load package status.</p>';
+  }
   // Reopens the wizard filled with this store. The sign-in key is not shown, so keep it unless you type a new one.
   function prefillWizard(s) {
     resetBackendStore();
@@ -2207,8 +2430,34 @@ details summary { margin-top: 4px; }
     if (!b || !detailStore) return;
     var act = b.getAttribute("data-act");
     var isChattrn = detailStore.connection_type === "chattrn_api";
-    if (act === "edit") { isChattrn ? (prefillChattrnWizard(detailStore), showChattrnWizard()) : (prefillWizard(detailStore), showWizard()); }
+    var isLaravel = detailStore.connection_type === "laravel_package";
+    if (act === "edit") {
+      if (isLaravel) { prefillLaravelWizard(detailStore); showLaravelWizard(); }
+      else if (isChattrn) { prefillChattrnWizard(detailStore); showChattrnWizard(); }
+      else { prefillWizard(detailStore); showWizard(); }
+    }
     if (act === "disconnect") disconnectStore();
+    if (act === "regenerate-token") {
+      var lnote = $("laravelDetailNote");
+      if (!window.confirm("Regenerate the access token for " + detailStore.name + "? The package's old token stops working until you update its .env.")) return;
+      try {
+        var rr = await backend("POST", "/api/stores/" + detailStore.id + "/laravel/regenerate-token", {});
+        if (rr.http !== 200) throw new Error((rr.body.error && rr.body.error.message) || ("HTTP " + rr.http));
+        if (lnote) { lnote.style.color = ""; lnote.textContent = "New token: " + rr.body.access_token + " — set CHATTRN_ACCESS_TOKEN to this in the app's .env, then redeploy."; }
+        loadDetail(detailStore.id);
+      } catch (err) {
+        if (lnote) { lnote.style.color = "var(--fail)"; lnote.textContent = "Could not regenerate: " + err.message; }
+      }
+    }
+    if (act === "edit-config") {
+      var lnote2 = $("laravelDetailNote");
+      if (lnote2) { lnote2.style.color = ""; lnote2.textContent = "Edit config/chattrn.php on your server, then run php artisan chattrn:map again to re-register."; }
+    }
+    if (act === "run-map-again") {
+      var lnote3 = $("laravelDetailNote");
+      if (lnote3) { lnote3.style.color = ""; lnote3.textContent = "Run php artisan chattrn:map on your server to re-match models and refresh the status below."; }
+      loadLaravelStatus(detailStore.id);
+    }
     if (act === "replace-token") {
       var token = window.prompt("New access token for " + detailStore.name + ":");
       if (!token) return;
@@ -2427,6 +2676,287 @@ details summary { margin-top: 4px; }
     $("cBase").value = (s.chattrn && s.chattrn.base_url) || "";
     $("cToken").value = "";
     cState.storeId = s.id;
+  }
+
+  // ---- Laravel package wizard (slice 3: Install package -> Test connection -> Delivery setup) ----
+  var lState = { step: 1, storeId: null, sniffed: false, pollTimer: null };
+  var LSTEP_NEXT = ["Continue: test connection", "Continue: delivery setup", "Finish and connect store"];
+  var LSTEP_SUB = ["Composer and artisan commands", "Data and speed", "Where you deliver"];
+
+  function resetLaravelStore() { lState.storeId = null; lState.sniffed = false; stopLaravelPoll(); }
+
+  function showLaravelWizard() {
+    setCrumbStore("");
+    hideAllViews();
+    $("laravelWizardView").hidden = false;
+    closeStoreMenu();
+    $("lTokenLine").textContent = "Generate a token to continue…";
+    $("lCopyToken").setAttribute("data-copy", "");
+    $("lTokenNote").textContent = "";
+    lShowStep(1);
+  }
+
+  function lShowStep(n) {
+    lState.step = Math.max(1, Math.min(3, n));
+    document.querySelectorAll("[data-lpanel]").forEach(function (p) {
+      p.hidden = Number(p.getAttribute("data-lpanel")) !== lState.step;
+    });
+    document.querySelectorAll(".lstep").forEach(function (b) {
+      var i = Number(b.getAttribute("data-lstep"));
+      b.classList.toggle("on", i === lState.step);
+      b.classList.toggle("done", i < lState.step);
+      b.querySelector(".num").textContent = i < lState.step ? "✓" : String(i);
+      b.querySelector(".s").textContent = i < lState.step ? "Edit" : i === lState.step ? "You are here" : LSTEP_SUB[i - 1];
+    });
+    $("lBack").disabled = lState.step === 1;
+    $("lNext").textContent = LSTEP_NEXT[lState.step - 1];
+    if (lState.step === 1) {
+      if (lState.storeId) { loadLaravelWaitRows(); startLaravelPoll(); }
+      else { $("lWaitRows").innerHTML = '<p class="hint">Fill in the website URL and generate a token below to get started.</p>'; }
+    } else {
+      stopLaravelPoll();
+    }
+    if (lState.step === 2) runLaravelTest();
+    if (lState.step === 3) loadLaravelZones();
+  }
+  document.querySelectorAll(".lstep").forEach(function (b) {
+    b.addEventListener("click", function () { if (Number(b.getAttribute("data-lstep")) <= lState.step) lShowStep(Number(b.getAttribute("data-lstep"))); });
+  });
+  $("lBack").addEventListener("click", function () { lShowStep(lState.step - 1); });
+
+  function lMissingDetails() {
+    var m = [];
+    if (!$("lSiteUrl").value.trim()) m.push("Website URL");
+    if ($("lBrand").selectedIndex === 0) m.push("Assign brand");
+    return m;
+  }
+
+  // Creates (or reuses) the backend store for this wizard session.
+  async function ensureLaravelStore() {
+    if (!lState.storeId) {
+      var res = await backend("POST", "/api/stores", {
+        name: $("lStoreName").value.trim() || "Store",
+        website_url: $("lSiteUrl").value.trim(),
+        brand: $("lBrand").selectedIndex > 0 ? $("lBrand").value : null,
+        connection_type: "laravel_package",
+        delivery_mode: $("lStoreType").value,
+      });
+      if (res.http !== 200 && res.http !== 201) throw new Error((res.body.error && res.body.error.message) || ("HTTP " + res.http));
+      lState.storeId = res.body.id;
+    }
+    return lState.storeId;
+  }
+
+  ["lSiteUrl", "lBrand", "lStoreType"].forEach(function (id) {
+    $(id).addEventListener("change", function () { resetLaravelStore(); $("lTokenLine").textContent = "Generate a token to continue…"; $("lTokenNote").textContent = ""; });
+  });
+
+  // "Modal: Laravel not detected" - sniffs the entered website once, before minting a token.
+  function showLaravelModal(framework) {
+    $("laravelModalMsg").textContent = framework
+      ? "We checked this website and it looks like " + framework + ", not Laravel."
+      : "We checked this website and didn't see signs of a Laravel app.";
+    $("laravelModalBackdrop").hidden = false;
+  }
+  function hideLaravelModal() { $("laravelModalBackdrop").hidden = true; }
+  $("laravelModalContinue").addEventListener("click", function () { hideLaravelModal(); lGenerateToken(); });
+  $("laravelModalSwitch").addEventListener("click", function () {
+    hideLaravelModal();
+    resetBackendStore();
+    $("siteUrl").value = $("lSiteUrl").value;
+    showWizard();
+  });
+
+  async function lGenerateToken() {
+    var btn = $("lGenToken");
+    btn.disabled = true;
+    $("lTokenNote").style.color = "";
+    $("lTokenNote").textContent = "Generating…";
+    try {
+      var id = await ensureLaravelStore();
+      var res = await backend("POST", "/api/stores/" + id + "/laravel/connection-token", {});
+      if (res.http !== 200 && res.http !== 201) throw new Error((res.body.error && res.body.error.message) || ("HTTP " + res.http));
+      var line = "CHATTRN_TOKEN=" + res.body.token;
+      $("lTokenLine").textContent = line;
+      $("lCopyToken").setAttribute("data-copy", line);
+      var mins = Math.max(1, Math.round((new Date(res.body.expires_at) - Date.now()) / 60000));
+      $("lTokenNote").textContent = "Expires in about " + mins + " minutes. Generating again replaces it.";
+      loadLaravelWaitRows();
+      startLaravelPoll();
+    } catch (e) {
+      $("lTokenNote").style.color = "var(--fail)";
+      $("lTokenNote").textContent = "Could not generate a token: " + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+  $("lGenToken").addEventListener("click", async function () {
+    var site = $("lSiteUrl").value.trim();
+    if (!site) { $("lDetailsErr").hidden = false; $("lDetailsErr").textContent = "Fill in: Website URL."; return; }
+    if (lState.sniffed) { lGenerateToken(); return; }
+    var btn = this;
+    btn.disabled = true;
+    $("lTokenNote").style.color = "";
+    $("lTokenNote").textContent = "Checking the website…";
+    try {
+      var res = await backend("POST", "/api/website-sniff", { website_url: site });
+      lState.sniffed = true;
+      $("lTokenNote").textContent = "";
+      if (res.http === 200 && res.body.checked && res.body.laravel_likely === false) {
+        btn.disabled = false;
+        showLaravelModal(res.body.framework);
+        return;
+      }
+      btn.disabled = false;
+      lGenerateToken();
+    } catch (e) {
+      lState.sniffed = true;
+      btn.disabled = false;
+      lGenerateToken();
+    }
+  });
+
+  function waitRowHtml(c) {
+    var cls = c.state === "pass" ? "pass" : c.state === "warn" ? "warn" : "pending";
+    var icon = cls === "pass" ? "&#10003;" : cls === "warn" ? "!" : "&middot;";
+    return '<div class="wait-row"><span class="wicon ' + cls + '">' + icon + '</span><div class="wbody"><div class="wtitle">' + esc(c.label) + '</div><div class="wsub">' + esc(c.message || "") + '</div></div></div>';
+  }
+
+  async function loadLaravelWaitRows() {
+    if (!lState.storeId) {
+      $("lWaitRows").innerHTML = '<p class="hint">Fill in the website URL and generate a token below to get started.</p>';
+      return;
+    }
+    try {
+      var id = await ensureLaravelStore();
+      var res = await backend("GET", "/api/stores/" + id + "/laravel/install-status");
+      if (res.http !== 200) throw new Error("HTTP " + res.http);
+      $("lWaitRows").innerHTML = res.body.checks.map(waitRowHtml).join("");
+      $("lNext").disabled = lState.step === 1 && !res.body.can_continue;
+    } catch (e) {
+      $("lWaitRows").innerHTML = '<p class="hint" style="color:var(--fail)">Could not load status: ' + esc(e.message) + '</p>';
+    }
+  }
+  $("lRecheck").addEventListener("click", loadLaravelWaitRows);
+
+  function startLaravelPoll() {
+    stopLaravelPoll();
+    lState.pollTimer = setInterval(loadLaravelWaitRows, 8000);
+  }
+  function stopLaravelPoll() {
+    if (lState.pollTimer) { clearInterval(lState.pollTimer); lState.pollTimer = null; }
+  }
+
+  document.body.addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest(".copy-cmd") : null;
+    if (!b) return;
+    var text = b.getAttribute("data-copy");
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(
+      function () { var t = b.textContent; b.textContent = "Copied"; setTimeout(function () { b.textContent = t === "Copied" ? "Copy" : t; }, 1500); },
+      function () { b.textContent = "Copy blocked"; });
+  });
+
+  $("lNext").addEventListener("click", async function () {
+    if (lState.step === 1) {
+      var miss = lMissingDetails();
+      $("lDetailsErr").hidden = !miss.length;
+      $("lDetailsErr").textContent = miss.length ? "Fill in: " + miss.join(", ") + "." : "";
+      if (miss.length) return;
+      if (!lState.storeId) {
+        $("lTokenNote").style.color = "var(--fail)";
+        $("lTokenNote").textContent = "Generate a token and finish the install commands above before continuing.";
+        return;
+      }
+      try {
+        var id = await ensureLaravelStore();
+        var res = await backend("GET", "/api/stores/" + id + "/laravel/install-status");
+        if (res.http === 200 && res.body.can_continue) { lShowStep(2); return; }
+        $("lTokenNote").style.color = "var(--fail)";
+        $("lTokenNote").textContent = "Finish the install commands above before continuing.";
+      } catch (e) {
+        $("lTokenNote").style.color = "var(--fail)";
+        $("lTokenNote").textContent = "Could not check status: " + e.message;
+      }
+      return;
+    }
+    if (lState.step < 3) { lShowStep(lState.step + 1); return; }
+    await finishLaravelConnection();
+  });
+
+  async function runLaravelTest() {
+    var id;
+    $("lTestPanel").innerHTML = '<p class="hint">Running the 9 checks against your store…</p>';
+    try {
+      id = await ensureLaravelStore();
+      var res = await backend("POST", "/api/stores/" + id + "/test-runs", {});
+      var run = res.body;
+      var checksHtml = '<div class="card"><h3 class="card-title">Test connection</h3><div class="check-list">' +
+        run.checks.map(checkRowHtml).join("") + '</div></div>';
+      var dqHtml = '<div class="card"><h3 class="card-title">Data quality</h3><div class="dq-list check-list">' +
+        (run.data_quality || []).map(checkRowHtml).join("") + '</div></div>';
+      $("lTestPanel").innerHTML = checksHtml + dqHtml;
+      $("lNext").disabled = !run.can_continue;
+    } catch (e) {
+      $("lTestPanel").innerHTML = '<p class="hint" style="color:var(--fail)">Could not run the test: ' + esc(e.message) + '</p>';
+    }
+  }
+
+  async function loadLaravelZones() {
+    $("lZoneRows").innerHTML = '<tr><td colspan="3" class="hint">Loading zones…</td></tr>';
+    try {
+      var id = await ensureLaravelStore();
+      var res = await backend("GET", "/api/stores/" + id + "/zones");
+      if (res.http !== 200) throw new Error("HTTP " + res.http);
+      var zones = res.body.zones || [];
+      if (!zones.length) { $("lZoneRows").innerHTML = '<tr><td colspan="3" class="hint">No zones returned by GET /locations.json.</td></tr>'; return; }
+      $("lZoneRows").innerHTML = zones.map(function (z) {
+        return '<tr><td>' + esc(z.name || String(z.id)) + '</td><td>' + esc((z.areas || []).join(", ") || "—") + '</td><td>' + esc(z.min_order || "—") + '</td></tr>';
+      }).join("");
+    } catch (e) {
+      $("lZoneRows").innerHTML = '<tr><td colspan="3" class="hint" style="color:var(--fail)">Could not read zones: ' + esc(e.message) + '</td></tr>';
+    }
+  }
+
+  async function finishLaravelConnection() {
+    var btn = $("lNext");
+    btn.disabled = true;
+    $("lFinishNote").style.color = "";
+    $("lFinishNote").textContent = "Connecting…";
+    try {
+      var id = await ensureLaravelStore();
+      await backend("PUT", "/api/stores/" + id + "/delivery-settings", {
+        mode: $("lStoreType").value,
+        ask_area_when: "when_needed",
+        remember_area: $("lRemember").checked,
+      });
+      var res = await backend("GET", "/api/stores/" + id + "/laravel/install-status");
+      if (res.http !== 200 || !res.body.can_continue) throw new Error("The package isn't fully connected yet.");
+      var check = await backend("POST", "/api/stores/" + id + "/chattrn/check", {});
+      if (check.body.state !== "connected") throw new Error(check.body.message || "Could not connect.");
+      $("lFinishNote").textContent = "";
+      stopLaravelPoll();
+      showList();
+      setBanner(($("lStoreName").value.trim() || "Store") + " is connected.");
+    } catch (e) {
+      $("lFinishNote").style.color = "var(--fail)";
+      $("lFinishNote").textContent = "Not connected yet: " + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // Reopens the Laravel wizard filled with this store, for Edit connection.
+  function prefillLaravelWizard(s) {
+    resetLaravelStore();
+    $("lStoreName").value = s.name || "";
+    $("lSiteUrl").value = s.website_url || "";
+    var brand = $("lBrand");
+    if (s.brand && !Array.from(brand.options).some(function (o) { return o.value === s.brand; })) brand.add(new Option(s.brand, s.brand));
+    brand.value = s.brand || brand.options[0].value;
+    $("lStoreType").value = s.delivery && s.delivery.mode === "outlet" ? "outlet" : "zone";
+    lState.storeId = s.id;
+    lState.sniffed = true;
   }
 
   init();
