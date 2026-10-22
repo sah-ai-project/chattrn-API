@@ -253,6 +253,19 @@ details summary { margin-top: 4px; }
 .btn-grey { background: var(--chip-bg); color: var(--fg); border: 0; border-radius: 8px; height: 28px; padding: 0 10px; font: 500 13px/16px Inter, sans-serif; cursor: pointer; }
 .btn-red { background: var(--fail); color: #fff; border: 0; border-radius: 8px; height: 28px; padding: 0 10px; font: 500 13px/16px Inter, sans-serif; cursor: pointer; }
 @media (max-width: 640px) { .detail-layout { grid-template-columns: 1fr; } }
+/* ---- Connection-type choice and Chattrn API wizard ---- */
+.conn-choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.conn-choice-card { display: flex; flex-direction: column; gap: 10px; text-align: left; cursor: pointer; }
+.conn-choice-card h3 { font-size: 15px; }
+.conn-choice-card p { color: var(--muted); font-size: 13px; line-height: 20px; margin: 0; }
+.conn-choice-card .badge { align-self: flex-start; }
+@media (max-width: 640px) { .conn-choice-grid { grid-template-columns: 1fr; } }
+.check-list { display: flex; flex-direction: column; gap: 0; }
+.check-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line2); }
+.check-row:last-child { border-bottom: 0; }
+.check-row .label { flex: 0 0 180px; font-weight: 500; font-size: 13px; }
+.check-row .msg { flex: 1 1 auto; font-size: 13px; color: var(--muted); }
+.dq-list { display: flex; flex-direction: column; gap: 0; margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -316,6 +329,25 @@ details summary { margin-top: 4px; }
         </div>
         <div id="storeMenu" class="store-menu" hidden><button type="button" id="copyStoreId">Copy store ID</button></div>
       </section>
+      <section id="connectChoiceView" hidden style="display:flex;flex-direction:column;gap:20px">
+        <div><button type="button" class="plain" id="backFromChoice" style="color:var(--brand)">&larr; Connected stores</button></div>
+        <header>
+          <h1 class="page-title">Connect your website</h1>
+          <p class="page-sub">Choose how Chattrn should read your store.</p>
+        </header>
+        <div class="conn-choice-grid">
+          <div class="card conn-choice-card" id="chooseChattrnApi">
+            <span class="badge b-pass">Recommended &middot; about 10 min</span>
+            <h3>Chattrn API</h3>
+            <p>Your store already serves the Chattrn API (the Shopify-compatible format), or your developer can add it from the spec. Connects in one step, no field mapping.</p>
+          </div>
+          <div class="card conn-choice-card" id="chooseMappedApi">
+            <span class="badge b-skip">About 30 min</span>
+            <h3>Map my existing API</h3>
+            <p>Your store has its own API with its own field names. Chattrn reads samples and matches the fields for you.</p>
+          </div>
+        </div>
+      </section>
       <section id="detailView" hidden style="display:flex;flex-direction:column;gap:20px">
         <div class="detail-layout">
           <nav class="subnav" aria-label="Store sections">
@@ -329,7 +361,80 @@ details summary { margin-top: 4px; }
           <div class="detail-main" id="detailBody"></div>
         </div>
       </section>
-      <div id="wizardView" class="wizard-view" hidden>
+        <div id="chattrnWizardView" class="wizard-view" hidden>
+      <header>
+        <h1 class="page-title">Chattrn API &middot; Store and API</h1>
+        <p class="page-sub">Connect a store that already speaks the Chattrn API: the same resources and fields as Shopify's Admin REST API, read with your access token.</p>
+      </header>
+
+      <div class="stepper" aria-label="Setup steps">
+        <button type="button" class="cstep" data-cstep="1"><span class="num">1</span><span><span class="t" style="display:block">Store and API</span><span class="s">Base URL and access token</span></span></button>
+        <button type="button" class="cstep" data-cstep="2"><span class="num">2</span><span><span class="t" style="display:block">Test connection</span><span class="s">Data and speed</span></span></button>
+        <button type="button" class="cstep" data-cstep="3"><span class="num">3</span><span><span class="t" style="display:block">Delivery setup</span><span class="s">Where you deliver</span></span></button>
+      </div>
+
+      <!-- STEP 1: Store and API -->
+      <section data-cpanel="1" style="display:flex;flex-direction:column;gap:20px">
+        <div class="card">
+          <div class="card-head"><div><h3>Store details</h3><p>How the store appears in Chattrn and which brand's conversations it serves.</p></div></div>
+          <div class="row2">
+            <div class="field"><label for="cStoreName">Store name</label><input type="text" id="cStoreName" placeholder="e.g. My store" autocomplete="off"></div>
+            <div class="field"><label for="cSiteUrl">Website URL <span style="color:var(--fail)">*</span></label><input type="text" id="cSiteUrl" placeholder="https://your-store.com" autocomplete="off"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label for="cBrand">Assign brand <span style="color:var(--fail)">*</span></label><select id="cBrand"><option>Select a brand</option><option>Your brand</option></select></div>
+            <div class="field"><label for="cStoreType">Store Type <span style="color:var(--fail)">*</span></label>
+              <select id="cStoreType" aria-label="Store Type"><option value="zone" selected>Zone-based</option><option value="outlet">Outlet-based</option></select>
+            </div>
+          </div>
+          <p class="hint" id="cDetailsErr" style="color:var(--fail)" hidden></p>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div><h3>API connection</h3><p>Your store's Chattrn API base URL and the access token it issued.</p></div>
+            <a class="plain" href="/openapi.yaml" target="_blank" rel="noopener">Download API Spec (OpenAPI)</a>
+          </div>
+          <div class="row2">
+            <div class="field"><label for="cBase">API base URL</label><input type="text" id="cBase" placeholder="https://your-store.com/chattrn/api/2026-10" autocomplete="off"><span class="hint">Local mock: http://127.0.0.1:3102/chattrn/api/2026-10</span></div>
+            <div class="field"><label for="cToken">Access token</label><input type="password" id="cToken" autocomplete="off" spellcheck="false"><span class="hint">Sent as X-Chattrn-Access-Token. Stored encrypted, never shown again.</span></div>
+          </div>
+          <p class="hint" id="cCheckMsg" style="min-height:18px"></p>
+        </div>
+      </section>
+
+      <!-- STEP 2: Test connection -->
+      <section data-cpanel="2" hidden style="display:flex;flex-direction:column;gap:20px">
+        <div id="cTestPanel"></div>
+      </section>
+
+      <!-- STEP 3: Delivery setup -->
+      <section data-cpanel="3" hidden style="display:flex;flex-direction:column;gap:20px">
+        <div class="card" id="cDeliveryCard">
+          <div class="card-head">
+            <div><div class="sec-title">Delivery zones</div><p class="hint" style="margin-top:4px">Zones, areas and minimum orders come from your store and stay in sync. Edit them in your store, not here.</p></div>
+            <span class="badge b-skip">Read from GET /locations.json</span>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Zone</th><th>Areas</th><th>Minimum order</th></tr></thead>
+            <tbody id="cZoneRows"><tr><td colspan="3" class="hint">Loading zones…</td></tr></tbody>
+          </table></div>
+        </div>
+        <div class="card">
+          <div><div class="sec-title">When should the AI ask for the area?</div><p class="hint" style="margin-top:4px">Asked once per customer. It's saved on the conversation, so a human agent sees it too.</p></div>
+          <label class="opt"><input type="radio" name="cAsk" checked><span><span class="opt-title">When the customer first asks about a product <span class="badge b-pink">Recommended</span></span></span></label>
+          <label class="opt"><input type="radio" name="cAsk"><span><span class="opt-title">At the start of every new chat</span></span></label>
+          <label class="opt" style="border-top:1px solid var(--line2);padding-top:14px"><input type="checkbox" id="cRemember" checked><span class="opt-title">Remember the area for returning customers</span></label>
+        </div>
+      </section>
+
+      <div class="footer" style="border:0;padding:0;margin-top:0">
+        <button type="button" class="plain" id="cBack">Back</button>
+        <button type="button" class="primary" id="cNext">Continue: test connection</button>
+      </div>
+      <p class="hint" id="cFinishNote" role="status" style="margin:0;min-height:18px"></p>
+      </div>
+    <div id="wizardView" class="wizard-view" hidden>
       <header>
         <h1 class="page-title">Connect a custom website</h1>
         <p class="page-sub">Connect your own ecommerce website through its API. Products, stock and orders then work in Skills, Actions, the AI Agent, the widget and the inbox, just like a Shopify store. Nothing is saved, and only GET requests are sent.</p>
@@ -1783,21 +1888,32 @@ details summary { margin-top: 4px; }
     $("crumbStore").hidden = !name;
     $("crumbStoreSep").hidden = !name;
   }
-  function showList() {
-    setCrumbStore("");
+  function hideAllViews() {
+    $("listView").hidden = true;
     $("wizardView").hidden = true;
     $("detailView").hidden = true;
+    $("connectChoiceView").hidden = true;
+    $("chattrnWizardView").hidden = true;
+  }
+  function showList() {
+    setCrumbStore("");
+    hideAllViews();
     $("listView").hidden = false;
     closeStoreMenu();
     loadStores();
   }
   function showWizard() {
     setCrumbStore("");
-    $("listView").hidden = true;
-    $("detailView").hidden = true;
+    hideAllViews();
     $("wizardView").hidden = false;
     closeStoreMenu();
     showStep(1);
+  }
+  function showChoice() {
+    setCrumbStore("");
+    hideAllViews();
+    $("connectChoiceView").hidden = false;
+    closeStoreMenu();
   }
   function setBanner(text) {
     $("listBannerText").textContent = text || "";
@@ -1876,7 +1992,10 @@ details summary { margin-top: 4px; }
     if (!e.target.closest || (!e.target.closest("#storeMenu") && !e.target.closest(".icon-btn"))) closeStoreMenu();
   });
   $("storeSearch").addEventListener("input", renderStores);
-  $("connectBtn").addEventListener("click", function () { resetBackendStore(); setBanner(""); showWizard(); });
+  $("connectBtn").addEventListener("click", function () { resetBackendStore(); setBanner(""); showChoice(); });
+  $("backFromChoice").addEventListener("click", showList);
+  $("chooseMappedApi").addEventListener("click", function () { resetBackendStore(); showWizard(); });
+  $("chooseChattrnApi").addEventListener("click", function () { resetChattrnStore(); showChattrnWizard(); });
 
   // Finish runs the connection check again. The store joins the list only when that check passes.
   async function finishConnection() {
@@ -1909,8 +2028,7 @@ details summary { margin-top: 4px; }
     return '<div class="kv"><span class="kv-l">' + esc(label) + '</span><span class="kv-v">' + valueHtml + '</span></div>';
   }
   function showDetail(id) {
-    $("listView").hidden = true;
-    $("wizardView").hidden = true;
+    hideAllViews();
     $("detailView").hidden = false;
     closeStoreMenu();
     $("detailBody").innerHTML = '<p class="hint">Loading…</p>';
@@ -1928,6 +2046,7 @@ details summary { margin-top: 4px; }
   function renderDetail(s) {
     detailStore = s;
     setCrumbStore(s.name);
+    if (s.connection_type === "chattrn_api") { renderChattrnDetail(s); return; }
     var site = /^https?:\/\//.test(s.website_url || "")
       ? '<a href="' + esc(s.website_url) + '" target="_blank" rel="noopener">' + esc(hostOf(s.website_url)) + '</a>'
       : esc(s.website_url || "—");
@@ -1963,6 +2082,59 @@ details summary { margin-top: 4px; }
         kv("Failed syncs", "Not tracked yet") +
       '</div>';
   }
+
+  // Connection (Chattrn API) tab (devspec.txt screens list, "11d. Custom website: Connection (Chattrn API)").
+  function renderChattrnDetail(s) {
+    var site = /^https?:\/\//.test(s.website_url || "")
+      ? '<a href="' + esc(s.website_url) + '" target="_blank" rel="noopener">' + esc(hostOf(s.website_url)) + '</a>'
+      : esc(s.website_url || "—");
+    var delivery = s.delivery && s.delivery.mode === "outlet" ? "Outlet-based" : "Zone-based";
+    var status = s.status === "connected"
+      ? '<span class="badge b-pass">Connected</span>'
+      : s.status === "disconnected"
+        ? '<span class="badge b-skip">Disconnected</span>'
+        : '<span class="badge b-warn">Not connected</span>';
+    var chattrn = s.chattrn || {};
+    $("detailBody").innerHTML =
+      '<div class="card"><h3 class="card-title">Store</h3>' +
+        kv("Website", site) +
+        kv("Connection", "Chattrn API") +
+        kv("Brand", esc(s.brand || "—")) +
+        kv("Delivery", delivery) +
+        kv("Status", status) +
+        '<div class="detail-actions">' +
+          '<button type="button" class="btn-grey" data-act="edit">Edit connection</button>' +
+          (s.status === "connected" ? '<button type="button" class="btn-red" data-act="disconnect">Disconnect</button>' : "") +
+        '</div>' +
+        '<p class="hint" id="detailNote"></p>' +
+      '</div>' +
+      '<div class="card"><h3 class="card-title">Connection</h3>' +
+        kv("Base URL", esc(hostOf(chattrn.base_url) || "—")) +
+        kv("Access token", chattrn.token_saved ? "•••• saved" : "Not saved") +
+        kv("API version", esc(chattrn.api_version || "—")) +
+        kv("Currency", esc(s.currency || "—")) +
+        kv("Country", esc(s.country_code || "—")) +
+        '<div class="detail-actions">' +
+          '<button type="button" class="btn-grey" data-act="replace-token">Replace key</button>' +
+          '<button type="button" class="btn-grey" data-act="run-test">Run test again</button>' +
+        '</div>' +
+        '<p class="hint" id="chattrnDetailNote"></p>' +
+        '<h3 style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:10px">Endpoints</h3>' +
+        '<div class="check-list" id="chattrnEndpointList"><p class="hint">Loading…</p></div>' +
+      '</div>';
+    loadChattrnEndpoints(s.id);
+  }
+
+  async function loadChattrnEndpoints(id) {
+    var res;
+    try { res = await backend("GET", "/api/stores/" + id + "/chattrn/endpoints"); } catch (e) { res = { http: 0, body: {} }; }
+    var el = $("chattrnEndpointList");
+    if (!el) return;
+    var checks = res.body && res.body.checks;
+    el.innerHTML = checks && checks.length
+      ? checks.map(checkRowHtml).join("")
+      : '<p class="hint">No test has been run yet. Press Run test again.</p>';
+  }
   // Reopens the wizard filled with this store. The sign-in key is not shown, so keep it unless you type a new one.
   function prefillWizard(s) {
     resetBackendStore();
@@ -1979,11 +2151,38 @@ details summary { margin-top: 4px; }
     setMode($("storeType").value);
     state.storeId = s.id;
   }
-  $("detailBody").addEventListener("click", function (e) {
+  $("detailBody").addEventListener("click", async function (e) {
     var b = e.target.closest ? e.target.closest("[data-act]") : null;
     if (!b || !detailStore) return;
-    if (b.getAttribute("data-act") === "edit") { prefillWizard(detailStore); showWizard(); }
-    if (b.getAttribute("data-act") === "disconnect") disconnectStore();
+    var act = b.getAttribute("data-act");
+    var isChattrn = detailStore.connection_type === "chattrn_api";
+    if (act === "edit") { isChattrn ? (prefillChattrnWizard(detailStore), showChattrnWizard()) : (prefillWizard(detailStore), showWizard()); }
+    if (act === "disconnect") disconnectStore();
+    if (act === "replace-token") {
+      var token = window.prompt("New access token for " + detailStore.name + ":");
+      if (!token) return;
+      var note = $("chattrnDetailNote");
+      try {
+        var res = await backend("PUT", "/api/stores/" + detailStore.id + "/chattrn/token", { access_token: token });
+        if (res.http !== 200) throw new Error((res.body.error && res.body.error.message) || ("HTTP " + res.http));
+        if (note) note.textContent = "Key replaced.";
+        loadDetail(detailStore.id);
+      } catch (err) {
+        if (note) { note.style.color = "var(--fail)"; note.textContent = "Not saved: " + err.message; }
+      }
+    }
+    if (act === "run-test") {
+      var note2 = $("chattrnDetailNote");
+      if (note2) note2.textContent = "Running the 9 checks…";
+      try {
+        var r = await backend("POST", "/api/stores/" + detailStore.id + "/test-runs", {});
+        if (r.http !== 200) throw new Error("HTTP " + r.http);
+        if (note2) note2.textContent = "Test finished: " + r.body.summary.passed + " passed.";
+        loadChattrnEndpoints(detailStore.id);
+      } catch (err) {
+        if (note2) { note2.style.color = "var(--fail)"; note2.textContent = "Could not run the test: " + err.message; }
+      }
+    }
   });
   $("crumbAll").addEventListener("click", function (e) { e.preventDefault(); showList(); });
   async function disconnectStore() {
@@ -1998,6 +2197,185 @@ details summary { margin-top: 4px; }
       var note = $("detailNote");
       if (note) note.textContent = "Could not disconnect: " + e.message;
     }
+  }
+
+
+  // ---- Chattrn API wizard (native connector, slice 1B: Store and API -> Test connection -> Delivery setup) ----
+  var cState = { step: 1, storeId: null };
+  var CSTEP_NEXT = ["Continue: test connection", "Continue: delivery setup", "Finish and connect store"];
+  var CSTEP_SUB = ["Base URL and access token", "Data and speed", "Where you deliver"];
+
+  function resetChattrnStore() { cState.storeId = null; }
+
+  function showChattrnWizard() {
+    setCrumbStore("");
+    hideAllViews();
+    $("chattrnWizardView").hidden = false;
+    closeStoreMenu();
+    cShowStep(1);
+  }
+
+  function cShowStep(n) {
+    cState.step = Math.max(1, Math.min(3, n));
+    document.querySelectorAll("[data-cpanel]").forEach(function (p) {
+      p.hidden = Number(p.getAttribute("data-cpanel")) !== cState.step;
+    });
+    document.querySelectorAll(".cstep").forEach(function (b) {
+      var i = Number(b.getAttribute("data-cstep"));
+      b.classList.toggle("on", i === cState.step);
+      b.classList.toggle("done", i < cState.step);
+      b.querySelector(".num").textContent = i < cState.step ? "✓" : String(i);
+      b.querySelector(".s").textContent = i < cState.step ? "Edit" : i === cState.step ? "You are here" : CSTEP_SUB[i - 1];
+    });
+    $("cBack").disabled = cState.step === 1;
+    $("cNext").textContent = CSTEP_NEXT[cState.step - 1];
+    if (cState.step === 2) runChattrnTest();
+    if (cState.step === 3) loadChattrnZones();
+  }
+  document.querySelectorAll(".cstep").forEach(function (b) {
+    b.addEventListener("click", function () { if (Number(b.getAttribute("data-cstep")) <= cState.step) cShowStep(Number(b.getAttribute("data-cstep"))); });
+  });
+  $("cBack").addEventListener("click", function () { cShowStep(cState.step - 1); });
+
+  function cMissingDetails() {
+    var m = [];
+    if (!$("cSiteUrl").value.trim()) m.push("Website URL");
+    if ($("cBrand").selectedIndex === 0) m.push("Assign brand");
+    if (!$("cBase").value.trim()) m.push("API base URL");
+    return m;
+  }
+
+  // Creates (or reuses) the backend store, then runs the API connection check (devspec.txt: "API connection check").
+  async function ensureChattrnStore() {
+    if (!cState.storeId) {
+      var res = await backend("POST", "/api/stores", {
+        name: $("cStoreName").value.trim() || "Store",
+        website_url: $("cSiteUrl").value.trim(),
+        brand: $("cBrand").selectedIndex > 0 ? $("cBrand").value : null,
+        connection_type: "chattrn_api",
+        delivery_mode: $("cStoreType").value,
+        base_url: $("cBase").value.trim(),
+        access_token: $("cToken").value,
+      });
+      if (res.http !== 200 && res.http !== 201) throw new Error((res.body.error && res.body.error.message) || ("HTTP " + res.http));
+      cState.storeId = res.body.id;
+    }
+    return cState.storeId;
+  }
+
+  async function chattrnCheck() {
+    var id = await ensureChattrnStore();
+    var res = await backend("POST", "/api/stores/" + id + "/chattrn/check", {});
+    return res.body;
+  }
+
+  $("cNext").addEventListener("click", async function () {
+    var btn = this;
+    if (cState.step === 1) {
+      var miss = cMissingDetails();
+      $("cDetailsErr").hidden = !miss.length;
+      $("cDetailsErr").textContent = miss.length ? "Fill in: " + miss.join(", ") + "." : "";
+      if (miss.length) return;
+      btn.disabled = true;
+      $("cCheckMsg").style.color = "";
+      $("cCheckMsg").textContent = "Checking the connection…";
+      try {
+        var result = await chattrnCheck();
+        if (result.state !== "connected") throw new Error(result.message || "Could not connect.");
+        $("cCheckMsg").textContent = result.message || "Connected.";
+        cShowStep(2);
+      } catch (e) {
+        $("cCheckMsg").style.color = "var(--fail)";
+        $("cCheckMsg").textContent = "Not connected yet: " + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+      return;
+    }
+    if (cState.step < 3) { cShowStep(cState.step + 1); return; }
+    await finishChattrnConnection();
+  });
+
+  ["cBase", "cToken", "cSiteUrl"].forEach(function (id) { $(id).addEventListener("change", resetChattrnStore); });
+
+  function checkRowHtml(c) {
+    var cls = c.state === "passed" || c.state === "pass" ? "b-pass" : c.state === "failed" || c.state === "error" ? "b-fail" : c.state === "needs_attention" || c.state === "warning" ? "b-warn" : "b-skip";
+    var label = c.state === "passed" ? "Passed" : c.state === "pass" ? "Pass" : c.state === "failed" ? "Failed" : c.state === "needs_attention" ? "Needs attention" : c.state === "warning" ? "Warning" : c.state === "not_supported" ? "Not supported" : c.state === "not_run" ? "Not run" : c.state;
+    return '<div class="check-row"><span class="label">' + esc(c.label) + '</span><span class="msg">' + esc(c.message || "") + '</span><span class="badge ' + cls + '">' + esc(label) + '</span></div>';
+  }
+
+  async function runChattrnTest() {
+    var id;
+    $("cTestPanel").innerHTML = '<p class="hint">Running the 9 checks against your store…</p>';
+    try {
+      id = await ensureChattrnStore();
+      var res = await backend("POST", "/api/stores/" + id + "/test-runs", {});
+      var run = res.body;
+      var checksHtml = '<div class="card"><h3 class="card-title">Test connection</h3><div class="check-list">' +
+        run.checks.map(checkRowHtml).join("") + '</div></div>';
+      var dqHtml = '<div class="card"><h3 class="card-title">Data quality</h3><div class="dq-list check-list">' +
+        (run.data_quality || []).map(checkRowHtml).join("") + '</div></div>';
+      $("cTestPanel").innerHTML = checksHtml + dqHtml;
+      $("cNext").disabled = !run.can_continue;
+      if (!run.can_continue) $("cCheckMsg").textContent = "Store profile and Catalog must pass before continuing.";
+    } catch (e) {
+      $("cTestPanel").innerHTML = '<p class="hint" style="color:var(--fail)">Could not run the test: ' + esc(e.message) + '</p>';
+    }
+  }
+
+  async function loadChattrnZones() {
+    $("cZoneRows").innerHTML = '<tr><td colspan="3" class="hint">Loading zones…</td></tr>';
+    try {
+      var id = await ensureChattrnStore();
+      var res = await backend("GET", "/api/stores/" + id + "/zones");
+      if (res.http !== 200) throw new Error("HTTP " + res.http);
+      var zones = res.body.zones || [];
+      if (!zones.length) { $("cZoneRows").innerHTML = '<tr><td colspan="3" class="hint">No zones returned by GET /locations.json.</td></tr>'; return; }
+      $("cZoneRows").innerHTML = zones.map(function (z) {
+        return '<tr><td>' + esc(z.name || String(z.id)) + '</td><td>' + esc((z.areas || []).join(", ") || "—") + '</td><td>' + esc(z.min_order || "—") + '</td></tr>';
+      }).join("");
+    } catch (e) {
+      $("cZoneRows").innerHTML = '<tr><td colspan="3" class="hint" style="color:var(--fail)">Could not read zones: ' + esc(e.message) + '</td></tr>';
+    }
+  }
+
+  async function finishChattrnConnection() {
+    var btn = $("cNext");
+    btn.disabled = true;
+    $("cFinishNote").style.color = "";
+    $("cFinishNote").textContent = "Connecting…";
+    try {
+      var id = await ensureChattrnStore();
+      await backend("PUT", "/api/stores/" + id + "/delivery-settings", {
+        mode: $("cStoreType").value,
+        ask_area_when: "when_needed",
+        remember_area: $("cRemember").checked,
+      });
+      var result = await chattrnCheck();
+      if (result.state !== "connected") throw new Error(result.message || "Could not connect.");
+      $("cFinishNote").textContent = "";
+      showList();
+      setBanner(($("cStoreName").value.trim() || "Store") + " is connected.");
+    } catch (e) {
+      $("cFinishNote").style.color = "var(--fail)";
+      $("cFinishNote").textContent = "Not connected yet: " + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // Reopens the Chattrn wizard filled with this store, for Edit connection. The access token is never shown back.
+  function prefillChattrnWizard(s) {
+    resetChattrnStore();
+    $("cStoreName").value = s.name || "";
+    $("cSiteUrl").value = s.website_url || "";
+    var brand = $("cBrand");
+    if (s.brand && !Array.from(brand.options).some(function (o) { return o.value === s.brand; })) brand.add(new Option(s.brand, s.brand));
+    brand.value = s.brand || brand.options[0].value;
+    $("cStoreType").value = s.delivery && s.delivery.mode === "outlet" ? "outlet" : "zone";
+    $("cBase").value = (s.chattrn && s.chattrn.base_url) || "";
+    $("cToken").value = "";
+    cState.storeId = s.id;
   }
 
   init();

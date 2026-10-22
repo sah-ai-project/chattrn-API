@@ -13,10 +13,13 @@ const M = require("./mapping");
 const { runTests } = require("./test-runner");
 const { discoverZoneParam } = require("./location");
 const { syncCatalog, catalogFor } = require("./catalog");
+const CC = require("./chattrn-connector");
+const { runChattrnTests } = require("./chattrn-test-runner");
 
 const AUTH_MODES = ["none", "key", "bearer", "basic"];
 const DELIVERY_MODES = ["zone", "outlet"];
 const ASK_WHEN = ["always", "when_needed", "never"];
+const CONNECTION_TYPES = ["mapped_api", "chattrn_api"];
 
 function createApp({ dataDir, publicDir, adminToken, secretKey }) {
   const db = new Db(path.join(dataDir, "stores.json"));
@@ -61,38 +64,71 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
 
   route("GET", "/api/stores", () => ({ body: { stores: db.list() } }));
 
+  const cleanChattrnBase = (raw) => {
+    if (typeof raw !== "string" || !raw.trim()) throw new HttpError(400, "base_url_required", "Enter the base URL of your Chattrn API.");
+    let s = raw.trim().replace(/\/+$/, "").replace(/\/store\.json$/, "");
+    if (/[?#]/.test(s)) throw new HttpError(400, "base_url_query", "Remove the ? or # part from the base URL.");
+    if (!/^https?:\/\//.test(s)) throw new HttpError(400, "base_url_scheme", "The base URL must start with https://.");
+    return s;
+  };
+
   route("POST", "/api/stores", async ({ body }) => {
     const name = String(body.name || "").trim();
     if (!name || name.length > 120) throw new HttpError(400, "name_required", "Enter the store name (up to 120 characters).");
+    const connection_type = CONNECTION_TYPES.includes(body.connection_type) ? body.connection_type : "mapped_api";
+    const mode = body.delivery_mode;
+    if (!DELIVERY_MODES.includes(mode)) throw new HttpError(422, "delivery_mode_required", "Choose the Store Type: zone or outlet.");
+    const shared = {
+      id: randomUUID(),
+      name,
+      website_url: body.website_url ? String(body.website_url).trim() : null,
+      brand: body.brand ? String(body.brand).trim().slice(0, 120) || null : null,
+      connection_type,
+      status: "draft",
+      delivery: { mode, context_param: null, param_confirmed: false, zone_value: null, ask_area_when: "when_needed", remember_area: false },
+      samples: {},
+      test_runs: [],
+      created_at: new Date().toISOString(),
+    };
+
+    if (connection_type === "chattrn_api") {
+      const base = cleanChattrnBase(body.base_url);
+      await assertPublicUrl(base);
+      const token = typeof body.access_token === "string" ? body.access_token.trim() : "";
+      if (token && (token.length < 1 || token.length > 512)) throw new HttpError(400, "token_length", "The access token must be between 1 and 512 characters.");
+      const store = {
+        ...shared,
+        currency: null,
+        country_code: null,
+        chattrn: {
+          base_url: base,
+          access_token_enc: token ? encrypt(token, ctx.secretKey) : null,
+          api_version: null,
+          capabilities: null,
+        },
+      };
+      db.put(store);
+      return { status: 201, body: publicView(store) };
+    }
+
     const base = cleanBase(body.base_url);
     await assertPublicUrl(base);
     const a = validateAuth(body.auth || {}, null);
     if (a.mode !== "none" && !a.key) throw new HttpError(400, "key_required", "Enter the key, or choose No sign-in.");
-    // Store Type is required in Store details: zone or outlet. It sets the parameter every product call sends.
-    const mode = body.delivery_mode;
-    if (!DELIVERY_MODES.includes(mode)) throw new HttpError(422, "delivery_mode_required", "Choose the Store Type: zone or outlet.");
     const currency = body.currency ? String(body.currency).toUpperCase() : null;
     if (currency && !/^[A-Z]{3}$/.test(currency)) throw new HttpError(400, "currency", "Currency must be a 3-letter ISO 4217 code, like BDT or USD.");
     const store = {
-      id: randomUUID(),
-      name,
-      website_url: body.website_url ? String(body.website_url).trim() : null,
+      ...shared,
       base_url: base,
       auth: { mode: a.mode, header: a.header, secret_enc: a.key ? encrypt(a.key, ctx.secretKey) : null },
-      brand: body.brand ? String(body.brand).trim().slice(0, 120) || null : null,
       currency,
       country_code: body.country_code ? String(body.country_code).toUpperCase() : null,
-      status: "draft",
       // The parameter name is unknown until discovery finds it (POST /location/discover).
-      delivery: { mode, context_param: null, param_confirmed: false, zone_value: null, ask_area_when: "when_needed", remember_area: false },
       endpoints: {
         products: { method: "GET", path: "/products?page=:page", added: true },
         detail: { method: "GET", path: "/products/:id", added: true },
       },
-      samples: {},
       mapping: {},
-      test_runs: [],
-      created_at: new Date().toISOString(),
     };
     db.put(store);
     return { status: 201, body: publicView(store) };
@@ -136,6 +172,49 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
     s.status = "connected";
     db.put(s);
     return { body: { state: "connected", http_status: r.res.http, message: "Connected. The product list responded.", duration_ms: r.res.ms } };
+  });
+
+  // ---- Chattrn API connection (native connector, slice 1B) ----
+
+  const chattrnStore = (id) => {
+    const s = findStore(id);
+    if (s.connection_type !== "chattrn_api") throw new HttpError(409, "wrong_connection_type", "This store isn't connected through the Chattrn API.");
+    return s;
+  };
+
+  // Validates store.json and that products.json reads too (devspec.txt: "API connection check").
+  route("POST", "/api/stores/:id/chattrn/check", async ({ params }) => {
+    const s = chattrnStore(params.id);
+    const result = await CC.checkStore(ctx, s, { websiteUrl: s.website_url });
+    if (result.state === "connected" && result.store) {
+      s.currency = result.store.currency;
+      s.country_code = result.store.country_code;
+      s.delivery.mode = DELIVERY_MODES.includes(result.store.delivery_mode) ? result.store.delivery_mode : s.delivery.mode;
+      s.chattrn.api_version = result.store.api_version;
+      s.chattrn.capabilities = result.store.capabilities || {};
+      s.status = "connected";
+      db.put(s);
+    }
+    return { body: result };
+  });
+
+  // Replace key: the new token is tried first. If it fails, the old token keeps working.
+  route("PUT", "/api/stores/:id/chattrn/token", async ({ params, body }) => {
+    const s = chattrnStore(params.id);
+    const token = typeof body.access_token === "string" ? body.access_token.trim() : "";
+    if (!token || token.length > 512) throw new HttpError(400, "token_required", "Enter the new access token (up to 512 characters).");
+    const result = await CC.checkStore(ctx, s, { websiteUrl: s.website_url, tokenOverride: token });
+    if (result.state !== "connected") throw new HttpError(422, "token_rejected", `The token wasn't saved. Your old token still works. ${result.message}`);
+    s.chattrn.access_token_enc = encrypt(token, ctx.secretKey);
+    db.put(s);
+    return { body: publicView(s) };
+  });
+
+  // The Connection tab's per-endpoint status list: the checks from the latest test run, if any.
+  route("GET", "/api/stores/:id/chattrn/endpoints", ({ params }) => {
+    const s = chattrnStore(params.id);
+    const run = (s.test_runs || [])[0];
+    return { body: { checked_at: run ? run.finished_at : null, checks: run ? run.checks : [] } };
   });
 
   // ---- endpoints ----
@@ -229,6 +308,18 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
 
   route("GET", "/api/stores/:id/zones", async ({ params }) => {
     const s = findStore(params.id);
+    if (s.connection_type === "chattrn_api") {
+      const r = await CC.listLocations(ctx, s);
+      if (r.res.error || r.res.http !== 200) throw new HttpError(502, "store_error", "Could not read locations from the store.");
+      const zones = r.list.map((l) => ({
+        id: l.id, name: l.name,
+        areas: l.x_chattrn && Array.isArray(l.x_chattrn.areas) ? l.x_chattrn.areas : [],
+        min_order: l.x_chattrn ? l.x_chattrn.min_order : null,
+      }));
+      s.samples = { ...(s.samples || {}), zone: r.list.slice(0, 5) };
+      db.put(s);
+      return { body: { zones, count: zones.length, mapped: true, context_param: null, chosen: s.delivery.zone_value ?? null } };
+    }
     const r = await E.getJudged(ctx, s, "zones", {}, null);
     if (r.bad) throw new HttpError(502, "store_error", r.bad.message);
     const list = (M.extractList(r.body) || []).filter(M.isObj);
@@ -298,7 +389,9 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
 
   route("POST", "/api/stores/:id/test-runs", async ({ params, body }) => {
     const s = findStore(params.id);
-    const run = await runTests(ctx, s, { phone: body.phone || null, zone: body.zone ?? null, rediscover: !!body.rediscover });
+    const run = s.connection_type === "chattrn_api"
+      ? await runChattrnTests(ctx, s, {})
+      : await runTests(ctx, s, { phone: body.phone || null, zone: body.zone ?? null, rediscover: !!body.rediscover });
     db.put(s);
     return { body: run };
   });
@@ -375,6 +468,9 @@ function createApp({ dataDir, publicDir, adminToken, secretKey }) {
     try {
       if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/flow-tester")) {
         return serveFile(res, path.join(publicDir, "flow-tester.html"), "text/html; charset=utf-8");
+      }
+      if (req.method === "GET" && url.pathname === "/openapi.yaml") {
+        return serveFile(res, path.join(publicDir, "openapi.yaml"), "text/yaml; charset=utf-8");
       }
       if (!url.pathname.startsWith("/api/")) {
         res.writeHead(404, { "Content-Type": "text/plain" });

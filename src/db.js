@@ -36,11 +36,11 @@ class Db {
 }
 
 function publicView(store) {
-  const { auth, ...rest } = store;
-  return {
-    ...rest,
-    auth: { mode: auth.mode, header: auth.header || null, key_saved: !!auth.secret_enc },
-  };
+  const { auth, chattrn, ...rest } = store;
+  const out = { ...rest };
+  if (auth) out.auth = { mode: auth.mode, header: auth.header || null, key_saved: !!auth.secret_enc };
+  if (chattrn) out.chattrn = { base_url: chattrn.base_url, api_version: chattrn.api_version || null, capabilities: chattrn.capabilities || null, token_saved: !!chattrn.access_token_enc };
+  return out;
 }
 
 module.exports = { Db, publicView };
