@@ -260,6 +260,24 @@ details summary { margin-top: 4px; }
 .conn-choice-card p { color: var(--muted); font-size: 13px; line-height: 20px; margin: 0; }
 .conn-choice-card .badge { align-self: flex-start; }
 @media (max-width: 640px) { .conn-choice-grid { grid-template-columns: 1fr; } }
+.site-check-card { background: var(--field); border: 1px solid var(--line2); border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+.site-check-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.site-check-row .field { flex: 1 1 320px; min-width: 0; }
+.site-check-row .field label { font-size: 13px; font-weight: 500; color: var(--fg); }
+.site-check-row .field label .dim { color: var(--muted); font-weight: 400; }
+.site-check-hint { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.site-check-hint svg { flex: none; color: var(--muted2); }
+.or-divider { display: flex; align-items: center; gap: 12px; color: var(--muted2); font-size: 12px; }
+.or-divider::before, .or-divider::after { content: ""; flex: 1; height: 1px; background: var(--line2); }
+.or-divider span { background: var(--chip-bg); padding: 3px 12px; border-radius: 999px; }
+.ways-heading { font-size: 14px; font-weight: 600; color: var(--fg-strong); }
+.conn-row-list { display: flex; flex-direction: column; gap: 10px; }
+.conn-row { display: flex; align-items: center; gap: 14px; min-height: 80px; padding: 12px 20px; background: var(--surface); border: 1px solid var(--line2); border-radius: 10px; }
+.conn-row .icon-tile { width: 36px; height: 36px; border-radius: 8px; background: var(--field); display: grid; place-items: center; color: var(--brand); flex: none; }
+.conn-row .row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.conn-row .row-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; color: var(--fg-strong); }
+.conn-row .row-desc { font-size: 13px; color: var(--muted); }
+.conn-row .row-connect { flex: none; }
 .check-list { display: flex; flex-direction: column; gap: 0; }
 .check-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line2); }
 .check-row:last-child { border-bottom: 0; }
@@ -333,18 +351,43 @@ details summary { margin-top: 4px; }
         <div><button type="button" class="plain" id="backFromChoice" style="color:var(--brand)">&larr; Connected stores</button></div>
         <header>
           <h1 class="page-title">Connect your website</h1>
-          <p class="page-sub">Choose how Chattrn should read your store.</p>
+          <p class="page-sub">Enter your website address. Chattrn checks how it's built and recommends the easiest way to connect it.</p>
         </header>
-        <div class="conn-choice-grid">
-          <div class="card conn-choice-card" id="chooseChattrnApi">
-            <span class="badge b-pass">Recommended &middot; about 10 min</span>
-            <h3>Chattrn API</h3>
-            <p>Your store already serves the Chattrn API (the Shopify-compatible format), or your developer can add it from the spec. Connects in one step, no field mapping.</p>
+        <div class="site-check-card">
+          <div class="site-check-row">
+            <div class="field">
+              <label for="siteCheckUrl">Your Website address <span class="dim">(check before connect)</span></label>
+              <input type="text" id="siteCheckUrl" placeholder="https://www.yourstore.com">
+            </div>
+            <button type="button" class="primary" id="siteCheckBtn">Check website</button>
           </div>
-          <div class="card conn-choice-card" id="chooseMappedApi">
-            <span class="badge b-skip">About 30 min</span>
-            <h3>Map my existing API</h3>
-            <p>Your store has its own API with its own field names. Chattrn reads samples and matches the fields for you.</p>
+          <div class="site-check-hint">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+            <span>Takes about 5 seconds. We only read public pages; nothing on your website changes.</span>
+          </div>
+        </div>
+        <div class="or-divider"><span>or</span></div>
+        <div class="ways-heading">Ways to connect a custom website</div>
+        <div class="conn-row-list">
+          <div class="conn-row">
+            <div class="icon-tile">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+            </div>
+            <div class="row-body">
+              <div class="row-title">Chattrn API <span class="badge b-info">Developer needed</span></div>
+              <div class="row-desc">Your developer adds our endpoints.</div>
+            </div>
+            <button type="button" class="btn-grey row-connect" id="chooseChattrnApi">Connect</button>
+          </div>
+          <div class="conn-row">
+            <div class="icon-tile">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"></path></svg>
+            </div>
+            <div class="row-body">
+              <div class="row-title">Map my existing API</div>
+              <div class="row-desc">Your site already has an API. AI matches its fields; nothing to rebuild.</div>
+            </div>
+            <button type="button" class="btn-grey row-connect" id="chooseMappedApi">Connect</button>
           </div>
         </div>
       </section>
@@ -1913,6 +1956,7 @@ details summary { margin-top: 4px; }
     setCrumbStore("");
     hideAllViews();
     $("connectChoiceView").hidden = false;
+    $("siteCheckUrl").value = "";
     closeStoreMenu();
   }
   function setBanner(text) {
@@ -1996,6 +2040,12 @@ details summary { margin-top: 4px; }
   $("backFromChoice").addEventListener("click", showList);
   $("chooseMappedApi").addEventListener("click", function () { resetBackendStore(); showWizard(); });
   $("chooseChattrnApi").addEventListener("click", function () { resetChattrnStore(); showChattrnWizard(); });
+  $("siteCheckBtn").addEventListener("click", function () {
+    // Website-check probing is out of scope for this build (see devspec's "Website check" tool) —
+    // this just nudges toward the two supported connection paths below.
+    var u = $("siteCheckUrl").value.trim();
+    alert(u ? "Website check isn't wired up yet. Pick a connection option below for \"" + u + "\"." : "Enter a website address, or pick a connection option below.");
+  });
 
   // Finish runs the connection check again. The store joins the list only when that check passes.
   async function finishConnection() {
