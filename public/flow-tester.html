@@ -53,12 +53,13 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 .page-title { font-size: 22px; line-height: 34px; font-weight: 600; color: var(--fg); }
 .page-sub { font-size: 12px; line-height: 18px; color: var(--muted); margin-top: 6px; max-width: 700px; }
 .stepper { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.step { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); cursor: pointer; text-align: left; color: inherit; font: inherit; min-width: 0; }
-.step.on { border: 1.5px solid var(--brand); }
-.step .num { width: 26px; height: 26px; border-radius: 13px; display: grid; place-items: center; font-weight: 600; font-size: 13px; border: 1.5px solid var(--line2); color: var(--muted); flex: none; }
-.step.on .num { background: var(--brand); border-color: var(--brand); color: var(--brand-fg); }
-.step .t { font-weight: 600; font-size: 14px; line-height: 20px; color: var(--fg); }
-.step .s { font-size: 12px; line-height: 18px; color: var(--muted); }
+.stepper.stepper-3 { grid-template-columns: repeat(3, 1fr); }
+.step, .cstep { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); cursor: pointer; text-align: left; color: inherit; font: inherit; min-width: 0; }
+.step.on, .cstep.on { border: 1.5px solid var(--brand); }
+.step .num, .cstep .num { width: 26px; height: 26px; border-radius: 13px; display: grid; place-items: center; font-weight: 600; font-size: 13px; border: 1.5px solid var(--line2); color: var(--muted); flex: none; }
+.step.on .num, .cstep.on .num { background: var(--brand); border-color: var(--brand); color: var(--brand-fg); }
+.step .t, .cstep .t { font-weight: 600; font-size: 14px; line-height: 20px; color: var(--fg); }
+.step .s, .cstep .s { font-size: 12px; line-height: 18px; color: var(--muted); }
 
 /* ---- Cards ---- */
 .card { background: var(--surface); border: 1px solid var(--line2); border-radius: 10px; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
@@ -161,7 +162,7 @@ select { height: 36px; }
 .toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .15s; }
 .toggle[aria-pressed="true"] { background: var(--pass); }
 .toggle[aria-pressed="true"]::after { left: 22px; }
-.step.done .num { background: var(--pass); border-color: var(--pass); color: #fff; }
+.step.done .num, .cstep.done .num { background: var(--pass); border-color: var(--pass); color: #fff; }
 
 /* ---- Test connection (Figma layout) ---- */
 .banner { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 16px 24px; border-radius: 10px; border: 1px solid var(--line2); background: var(--surface); }
@@ -410,7 +411,7 @@ details summary { margin-top: 4px; }
         <p class="page-sub">Connect a store that already speaks the Chattrn API: the same resources and fields as Shopify's Admin REST API, read with your access token.</p>
       </header>
 
-      <div class="stepper" aria-label="Setup steps">
+      <div class="stepper stepper-3" aria-label="Setup steps">
         <button type="button" class="cstep" data-cstep="1"><span class="num">1</span><span><span class="t" style="display:block">Store and API</span><span class="s">Base URL and access token</span></span></button>
         <button type="button" class="cstep" data-cstep="2"><span class="num">2</span><span><span class="t" style="display:block">Test connection</span><span class="s">Data and speed</span></span></button>
         <button type="button" class="cstep" data-cstep="3"><span class="num">3</span><span><span class="t" style="display:block">Delivery setup</span><span class="s">Where you deliver</span></span></button>
